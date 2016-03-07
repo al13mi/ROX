@@ -13,13 +13,7 @@ enum
 
 
 namespace OpenFlow
-{
-    struct
-    {
-        unsigned char *buf;
-        ssize_t size;
-    } msg;
-    
+{    
     class Controller
     {
     public:
