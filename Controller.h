@@ -33,7 +33,7 @@ namespace OpenFlow
         uint32_t xid;
         
     };
-};
+}
 
 #endif
 
