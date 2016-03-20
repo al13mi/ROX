@@ -52,13 +52,14 @@ accept_conn_cb(struct evconnlistener *listener,
     struct event_base *base = evconnlistener_get_base(listener);
     bev = bufferevent_socket_new(
             base, fd, BEV_OPT_CLOSE_ON_FREE);
-    
-    
+
     bufferevent_setcb(bev, controller_read_cb, NULL, controller_event_cb, NULL);
     
     bufferevent_enable(bev, EV_READ|EV_WRITE);
-    
-    
+    controller.connectionHandler();
+
+
+
 }
 
 static void

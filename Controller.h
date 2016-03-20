@@ -19,18 +19,30 @@ namespace OpenFlow
     public:
         Controller();
         int rxPacket(unsigned char *buf, ssize_t size);
+        void connectionHandler();
     private:
-        void echoHandler(unsigned char *buf, ssize_t size);
+        void echoRequestHandler(unsigned char *buf, ssize_t size);
         void featureRequestHandler(unsigned char *buf, ssize_t size);
         void helloHandler(unsigned char * buf, ssize_t size);
-
-        void featureRequestFactory(unsigned char *buf);
-        void helloFactory(unsigned char *buf);
-        void echoReplyFactory(unsigned char *buf);
-        
+        void featuresReplyHandler(unsigned char *buf, ssize_t size);
 
         uint32_t version;
         uint32_t xid;
+
+        struct SwitchFeatures
+        {
+            uint64_t datapathId;
+            uint32_t nBuffers;
+            uint32_t capabilities;
+            uint16_t nTables;
+            uint16_t auxiliaryId;
+
+            SwitchFeatures();
+        };
+        SwitchFeatures switchFeatures;
+
+
+
         
     };
 }

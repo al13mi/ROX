@@ -2,7 +2,14 @@
 
 #include <iostream>
 #include <netinet/in.h>
+#include <bitset>
+
 #include "OpenFlow.h"
+
+#include "OpenFlow/Messages/HeaderEncoder.h"
+#include "OpenFlow/Messages/HelloDecoder.h"
+#include "OpenFlow/Messages/FeaturesDecoder.h"
+
 using namespace std;
 
 extern void txPacket(unsigned char *buf, ssize_t size);
@@ -26,79 +33,99 @@ namespace OpenFlow
         version = 0x5;
         xid = 1;    
     }
-    
-    int Controller::rxPacket(unsigned char *buf, ssize_t size)
+
+    void Controller::connectionHandler()
     {
-        ofp_header *header = (ofp_header*)buf;
+        uint8_t buf[1500];
+        OpenFlow::Messages::HeaderEncoder encoder(buf);
+        encoder.setLength(OpenFlow::Messages::HeaderEncoder::HEADER_MINIMUM_LENGTH);
+        encoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_HELLO);
+        encoder.setXid(xid++);
+        encoder.setVersion(version);
+        txPacket(encoder.getReadPtr(), sizeof(ofp_header));
+    }
+
+
+    int Controller::rxPacket(uint8_t *buf, ssize_t size)
+    {
         print_buf("rx: ", buf, size);
+
+
+        OpenFlow::Messages::HeaderDecoder decoder(buf);
+        uint16_t type = decoder.getType();
+
     #ifdef DEBUG
         cout << "Rxpacket: recv: " << size << " bytes\n";
-        cout << "Version:\t" << (uint16_t)header->version << endl;
-        cout << "Type:\t " << (uint16_t)header->type << endl;
-        cout << "Length:\t " << ntohs(header->length) << endl;
-        cout << "Xid:\t " << ntohl(header->xid) << endl;
+        cout << "Version:\t" << header.getVersion() << endl;
+        cout << "Type:\t " << header.getType() << endl;
+        cout << "Length:\t " << header.getLength() << endl;
+        cout << "Xid:\t " << header.getXid() << endl;
     #endif    
-        
-        uint16_t type = header->type;
+
     
         switch(type)
         {
-            case HELLO:
+            case OpenFlow::Messages::HeaderDecoder::OFPT_HELLO:
             {
                 helloHandler(buf, size);
                 break;
             }
-            case ECHO_REQUEST:
+            case OpenFlow::Messages::HeaderDecoder::OFPT_ECHO_REQUEST:
             {
-                echoHandler(buf, size);
+                echoRequestHandler(buf, size);
+                break;
+            }
+            case OpenFlow::Messages::HeaderDecoder::OFPT_FEATURES_REPLY:
+            {
+                featuresReplyHandler(buf, size);
                 break;
             }
         }
         return 0;
     }
     
-    void Controller::echoHandler(unsigned char *buf, ssize_t size)
+    void Controller::echoRequestHandler(unsigned char *buf, ssize_t size)
     {
-        echoReplyFactory(buf);
-        txPacket(buf, sizeof(ofp_header));
+        OpenFlow::Messages::HeaderEncoder encoder(buf);
+        encoder.setVersion(version);
+        encoder.setType(OpenFlow::Messages::HeaderDecoder::OFPT_ECHO_REPLY);
+        encoder.setLength(OpenFlow::Messages::HeaderDecoder::HEADER_MINIMUM_LENGTH);
+        txPacket(encoder.getReadPtr(), sizeof(ofp_header));
     }
-    
-    void Controller::echoReplyFactory(unsigned char *outbuf)
-    {
-        ofp_header *header = (ofp_header*)outbuf;
-        
-        header->version = version;
-        header->type = ECHO_REPLY;
-        header->length = htons(sizeof(ofp_header));
+
+    void Controller::helloHandler(unsigned char *buf, ssize_t size) {
+        OpenFlow::Messages::HelloDecoder decoder(buf);
+        // Check to see if their latest version is our latest version
+        uint32_t latestVersion = decoder.getVersion();
+        if(version == latestVersion)
+        {
+            uint8_t txBuf[1500];
+            OpenFlow::Messages::HeaderEncoder encoder(txBuf);
+            encoder.setLength(OpenFlow::Messages::HeaderEncoder::HEADER_MINIMUM_LENGTH);
+            encoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_FEATURES_REQUEST);
+            encoder.setXid(xid++);
+            encoder.setVersion(version);
+            txPacket(txBuf, encoder.getLength());
+        }
     }
-    
-    void Controller::featureRequestFactory(unsigned char* outbuf)
+
+    void Controller::featuresReplyHandler(unsigned char *buf, ssize_t size)
     {
-        ofp_header *hdr = (ofp_header*)outbuf;
-        hdr->version = version;
-        hdr->length = htons(sizeof(ofp_header));
-        hdr->type = FEATURES_REQUEST;
-        hdr->xid = htonl(xid++);
+        OpenFlow::Messages::FeaturesDecoder decoder(buf);
+        switchFeatures.capabilities = decoder.getCapabilities();
+        switchFeatures.datapathId = decoder.getDatapathId();
+        switchFeatures.nBuffers = decoder.getNBuffers();
+        switchFeatures.nTables = decoder.getNTables();
+        switchFeatures.auxiliaryId = decoder.getAuxiliaryId();
     }
-    
-    void Controller::helloFactory(unsigned char* outbuf)
+
+    Controller::SwitchFeatures::SwitchFeatures()
+        : datapathId(0)
+        , nBuffers(0)
+        , capabilities(0)
+        , nTables(0)
+        , auxiliaryId(0)
     {
-        ofp_hello *hi = (ofp_hello*)outbuf;
-        
-        hi->header.version = version;
-        hi->header.type = HELLO;
-        hi->header.length = htons(sizeof(ofp_header));
-        hi->header.xid = htonl(xid++);
-    }
-    
-    void Controller::helloHandler(unsigned char *buf, ssize_t size)
-    {
-        // For now lets just assume this worked
-        // TODO: need error handling here.  We also need to check the bitset
-        helloFactory(buf);
-        txPacket(buf, sizeof(ofp_header));
-        featureRequestFactory(buf);
-        txPacket(buf, sizeof(ofp_header));
     }
 
 }
