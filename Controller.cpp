@@ -3,6 +3,7 @@
 #include <iostream>
 #include <netinet/in.h>
 #include <bitset>
+#include <string.h>
 
 #include "OpenFlow/Messages/HeaderEncoder.h"
 #include "OpenFlow/Messages/HelloDecoder.h"
@@ -29,7 +30,8 @@ namespace OpenFlow
     Controller::Controller()
     {
         version = 0x5;
-        xid = 1;    
+        xid = 1;
+        memset(txBuf, 0, BUFFER_SIZE);
     }
 
     void Controller::connectionHandler()
@@ -78,11 +80,17 @@ namespace OpenFlow
                 featuresReplyHandler(buf, size);
                 break;
             }
+            case OpenFlow::Messages::HeaderDecoder::OFPT_PACKET_IN:
+            {
+                pktInDecoder(buf, size);
+                break;
+            }
+
         }
         return 0;
     }
     
-    void Controller::echoRequestHandler(unsigned char *buf, ssize_t size)
+    void Controller::echoRequestHandler(uint32_t *buf, ssize_t size)
     {
         OpenFlow::Messages::HeaderEncoder encoder(buf);
         encoder.setVersion(version);
@@ -91,19 +99,24 @@ namespace OpenFlow
         txPacket(encoder.getReadPtr(), encoder.getLength());
     }
 
-    void Controller::helloHandler(unsigned char *buf, ssize_t size) {
+    void Controller::helloHandler(uint32_t *buf, ssize_t size) {
         OpenFlow::Messages::HelloDecoder decoder(buf);
         // Check to see if their latest version is our latest version
         uint32_t latestVersion = decoder.getVersion();
         if(version == latestVersion)
         {
-            uint8_t txBuf[1500];
             OpenFlow::Messages::HeaderEncoder encoder(txBuf);
             encoder.setLength(OpenFlow::Messages::HeaderEncoder::HEADER_MINIMUM_LENGTH);
             encoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_FEATURES_REQUEST);
             encoder.setXid(xid++);
             encoder.setVersion(version);
             txPacket(txBuf, encoder.getLength());
+
+            // Set an exception flow entry in the flow table.
+        }
+        else
+        {
+            // Send an error
         }
     }
 
@@ -115,6 +128,10 @@ namespace OpenFlow
         switchFeatures.nBuffers = decoder.getNBuffers();
         switchFeatures.nTables = decoder.getNTables();
         switchFeatures.auxiliaryId = decoder.getAuxiliaryId();
+    }
+
+    void Controller::pktInDecoder(uint32_t *buf, ssize_t size)
+    {
     }
 
     Controller::SwitchFeatures::SwitchFeatures()

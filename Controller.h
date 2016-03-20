@@ -28,6 +28,8 @@ namespace OpenFlow
 
         uint32_t version;
         uint32_t xid;
+        uint8_t txBuf[BUFFER_SIZE];
+
 
         struct SwitchFeatures
         {
