@@ -25,6 +25,7 @@ namespace OpenFlow
         void featureRequestHandler(unsigned char *buf, ssize_t size);
         void helloHandler(unsigned char * buf, ssize_t size);
         void featuresReplyHandler(unsigned char *buf, ssize_t size);
+        void pktInDecoder(unsigned char *buf, ssize_t size);
 
         uint32_t version;
         uint32_t xid;

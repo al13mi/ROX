@@ -90,7 +90,7 @@ namespace OpenFlow
         return 0;
     }
     
-    void Controller::echoRequestHandler(uint32_t *buf, ssize_t size)
+    void Controller::echoRequestHandler(unsigned char *buf, ssize_t size)
     {
         OpenFlow::Messages::HeaderEncoder encoder(buf);
         encoder.setVersion(version);
@@ -99,7 +99,7 @@ namespace OpenFlow
         txPacket(encoder.getReadPtr(), encoder.getLength());
     }
 
-    void Controller::helloHandler(uint32_t *buf, ssize_t size) {
+    void Controller::helloHandler(unsigned char *buf, ssize_t size) {
         OpenFlow::Messages::HelloDecoder decoder(buf);
         // Check to see if their latest version is our latest version
         uint32_t latestVersion = decoder.getVersion();
@@ -130,7 +130,7 @@ namespace OpenFlow
         switchFeatures.auxiliaryId = decoder.getAuxiliaryId();
     }
 
-    void Controller::pktInDecoder(uint32_t *buf, ssize_t size)
+    void Controller::pktInDecoder(unsigned char *buf, ssize_t size)
     {
     }
 
