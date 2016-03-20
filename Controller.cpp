@@ -4,8 +4,6 @@
 #include <netinet/in.h>
 #include <bitset>
 
-#include "OpenFlow.h"
-
 #include "OpenFlow/Messages/HeaderEncoder.h"
 #include "OpenFlow/Messages/HelloDecoder.h"
 #include "OpenFlow/Messages/FeaturesDecoder.h"
@@ -42,7 +40,7 @@ namespace OpenFlow
         encoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_HELLO);
         encoder.setXid(xid++);
         encoder.setVersion(version);
-        txPacket(encoder.getReadPtr(), sizeof(ofp_header));
+        txPacket(encoder.getReadPtr(), encoder.getLength());
     }
 
 
@@ -90,7 +88,7 @@ namespace OpenFlow
         encoder.setVersion(version);
         encoder.setType(OpenFlow::Messages::HeaderDecoder::OFPT_ECHO_REPLY);
         encoder.setLength(OpenFlow::Messages::HeaderDecoder::HEADER_MINIMUM_LENGTH);
-        txPacket(encoder.getReadPtr(), sizeof(ofp_header));
+        txPacket(encoder.getReadPtr(), encoder.getLength());
     }
 
     void Controller::helloHandler(unsigned char *buf, ssize_t size) {

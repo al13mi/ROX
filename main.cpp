@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include "Controller.h"
-#include "OpenFlow.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
