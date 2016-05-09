@@ -1,16 +1,20 @@
+#ifndef ROX_OXMTLV_DECODER_H
+#define ROX_OXMTLV_DECODER_H
+
+#include "Network/Endian.h"
+
 namespace OpenFlow
 {
     namespace Messages
     {
-        /**
-         * TLV Header:
-         * 31-16:  OXM Class
-         * 15-9:   OXM Field
-         * 8:      HM
-         * 7-0:    OXM Length
-         */
-        class OxmTLV {
+        class OxmTLV
+        {
+
+        protected:
+            uint8_t *p;
         public:
+
+
             enum ofp_oxm_class {
                 OFPXMC_NXM_0 = 0x0000,
                 OFPXMC_NXM_1 = 0x0001,
@@ -62,12 +66,7 @@ namespace OpenFlow
                 OFPXMT_OFB_PBB_UCA = 41,
             };
 
-            void setIPv4FlowMatch(uint32_t inPort, uint8_t* ethDst, uint8_t* ethSrc,
-                                  uint32_t ipSrc, uint32_t ipDst, unt16_t srcPort,
-                                  uint16_t dstPort);
-
-        private:
-            struct OxmMatchFields
+            union OxmMatchFields
             {
                 uint32_t inPort;
                 uint8_t ethDst[12];
@@ -81,6 +80,32 @@ namespace OpenFlow
                 uint16_t srcPort;
                 uint16_t dstPort;
             };
+
+            explicit OxmTLV(uint8_t *p_)
+            : p(p_)
+            {
+            }
+
+            OxmTLV(OxmTLV const &decoder)
+            {
+            }
+
+            uint16_t getOxmClass()
+            {
+                return ntohs(p[0]);
+            }
+
+            uint8_t getOxmField()
+            {
+                return p[2];
+            }
+
+            uint8_t getOxmLength()
+            {
+                return p[3];
+            }
         };
     }
 }
+
+#endif

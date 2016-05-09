@@ -8,6 +8,10 @@
 #include "OpenFlow/Messages/HeaderEncoder.h"
 #include "OpenFlow/Messages/HelloDecoder.h"
 #include "OpenFlow/Messages/FeaturesDecoder.h"
+#include "OpenFlow/Messages/FlowMatchDecoder.h"
+#include "OpenFlow/Messages/OxmTLV.h"
+#include "OpenFlow/Messages/PacketInDecoder.h"
+#include "Network/Ethernet.h"
 
 using namespace std;
 
@@ -32,6 +36,8 @@ namespace OpenFlow
         version = 0x5;
         xid = 1;
         memset(txBuf, 0, BUFFER_SIZE);
+
+        m_routeTable = new Network::RouteTable();
     }
 
     void Controller::connectionHandler()
@@ -99,7 +105,8 @@ namespace OpenFlow
         txPacket(encoder.getReadPtr(), encoder.getLength());
     }
 
-    void Controller::helloHandler(unsigned char *buf, ssize_t size) {
+    void Controller::helloHandler(unsigned char *buf, ssize_t size)
+    {
         OpenFlow::Messages::HelloDecoder decoder(buf);
         // Check to see if their latest version is our latest version
         uint32_t latestVersion = decoder.getVersion();
@@ -132,6 +139,23 @@ namespace OpenFlow
 
     void Controller::pktInDecoder(unsigned char *buf, ssize_t size)
     {
+        OpenFlow::Messages::PacketInDecoder decoder(buf);
+        if(decoder.getReason() == OpenFlow::Messages::PacketInDecoder::ofp_packet_in_reason::OFPR_TABLE_MISS)
+        {
+            // Parse out the packet.
+            unsigned char *pkt = decoder.getEthernetHeader();
+            Network::EthernetHeader *ethernetHeader = (Network::EthernetHeader*)pkt;
+            uint16_t etherType =  *((uint16_t*)ethernetHeader->optional.type.ethertype);
+            if(htons(Network::IPV4) == etherType)
+            {
+                Network::EthernetHeader::IpHeaderV4 *iphdr = (Network::EthernetHeader::IpHeaderV4*)ethernetHeader->optional.type.payload;
+            }
+            else if(htons(Network::ARP) == etherType)
+            {
+                // TODO: marnold support arps.
+            }
+
+        }
     }
 
     Controller::SwitchFeatures::SwitchFeatures()
