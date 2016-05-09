@@ -81,7 +81,7 @@ void txPacket(unsigned char *buf, ssize_t size)
 }
 
 
-
+#ifndef TESTMAIN
 int
 main(int argc, char **argv)
 {
@@ -119,4 +119,4 @@ main(int argc, char **argv)
     event_base_dispatch(base);
     return 0;
 }
-
+#endif
