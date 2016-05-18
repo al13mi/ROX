@@ -3,11 +3,14 @@
 namespace System
 {
     Node::Node()
+        : left(NULL)
+        , right(NULL)
+        , nextHop(NULL)
     {
 
     }
 
-    Node::Node(const IpAddressV4 &address)
+    Node::Node(const Network::IpAddressV4 &address)
     {
 
     }
@@ -27,14 +30,19 @@ namespace System
 
     }
 
-    void LookupTree::insert(Node &node)
+    System::Error LookupTree::insert(Node &node)
     {
-
+        return System::Error::NO_ERROR;
     }
 
-    void LookupTree::getMatchingPrefix(IpAddressV4 &address)
+    System::Error LookupTree::remove(Node &node)
     {
+        return System::Error::NO_ERROR;
+    }
 
+    System::Error LookupTree::getMatchingPrefix(Network::IpAddressV4 &nextHop, Network::IpAddressV4 &address)
+    {
+        return System::Error::NO_ERROR;
     }
 
 }

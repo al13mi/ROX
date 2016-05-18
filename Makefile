@@ -1,5 +1,5 @@
 OBJS=main.o Controller.o Network/RouteTable.o Network/ArpTable.o System/LookupTree.o
-TESTS = gtest/Test.o gtest/Router.o gtest/LookupTreeTest.o
+TESTS = gtest/Test.o gtest/Router.o gtest/LookupTreeTest.o gtest/IpAddressTest.o
 MAIN=controller
 CFLAGS=-I$(realpath ../) -pthread -I. -g -msse4.2 -O0 -std=gnu++11 -L/usr/lib/x86_64-linux-gnu/ -L/usr/local/lib -levent -fsanitize=address -pedantic -Wall
 CFLAGS_TEST = -DTESTMAIN

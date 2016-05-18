@@ -2,19 +2,21 @@
 #define TREE_H
 
 #include <map>
-#include "IpAddressV4.h"
+#include "../Network/IpAddressV4.h"
+#include "Error.h"
 
 namespace System
 {
     struct Node
     {
         Node();
-        Node(const IpAddressV4  &address);
+        Node(const Network::IpAddressV4  &address);
         Node(const Node &node);
         ~Node();
 
-        uint8_t octet;
-        std::map <uint8_t, Node> children;
+        Node *left;
+        Node *right;
+        Network::IpAddressV4 *nextHop;
         bool end;
     };
 
@@ -22,9 +24,9 @@ namespace System
     {
     public:
         LookupTree();
-        void insert(Node &node);
-
-        void getMatchingPrefix(IpAddressV4 &address);
+        System::Error insert(Node &node);
+        System::Error remove(Node &node);
+        System::Error getMatchingPrefix(Network::IpAddressV4 &nextHop, Network::IpAddressV4 &address);
 
     private:
         Node root;
