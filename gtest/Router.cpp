@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "Network/RouteTable.h"
+#include "Network/Ethernet.h"
 class RouterTest : public ::testing::Test
 {
 protected:
@@ -13,9 +13,8 @@ protected:
 
     }
 
-    Network::RouteTable routeTable;
+    // Network::RouteTable routeTable;
 };
-
 
 TEST_F(RouterTest, TestHostMask)
 {
@@ -30,16 +29,3 @@ TEST_F(RouterTest, TestHostMask)
     res = Network::getHostMask(3232243726ul, 30);
     ASSERT_EQ(3232243724ul, res);
 }
-
-/**
-TEST_F(RouterTest, TestInsert)
-{
-    uint32_t address = 0xFFFFFFFF;
-    uint32_t size = 0xFFFFFFFF;
-    routeTable.insertRoute(address, size, address);
-    uint32_t nextHop = 0;
-    routeTable.findNextHop(1, nextHop);
-    ASSERT_NE(nextHop, address);
-
-}
- **/

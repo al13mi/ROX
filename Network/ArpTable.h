@@ -8,21 +8,26 @@
 #include <map>
 #include "Network/Ethernet.h"
 #include "System/Error.h"
+#include "../Network/IpAddressV4.h"
+
 
 namespace Network
 {
+    typedef std::pair<uint32_t, uint64_t> ArpTableEntry;
+    typedef std::map<uint32_t, uint64_t> ArpTableMap;
+
     class ArpTable
     {
     public:
-        void insertArpEntry(uint64_t mac, uint32_t address);
-        System::Error findArpEntry(uint64_t mac, uint32_t &address);
-        void removeArpEntry(uint64_t mac);
+        void insertArpEntry(uint64_t &mac, Network::IpAddressV4 &address);
+        System::Error findArpEntry(uint64_t &mac, Network::IpAddressV4 &address);
+        System::Error removeArpEntry(Network::IpAddressV4 &address);
         ArpTable(){}
         ~ArpTable(){}
     private:
         ArpTable(ArpTable& entry){}
 
-        std::map<uint32_t, uint64_t> m_arpTable;
+        ArpTableMap m_arpTable;
     };
 }
 

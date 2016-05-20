@@ -3,6 +3,16 @@
 namespace Network {
 
 #pragma pack(1)
+
+    inline uint32_t getHostMask(uint32_t address, uint32_t size)
+    {
+        uint32_t mask = 0xFFFFFFFF >> (32 - size);
+        mask = mask << (32 - size);
+        uint32_t key = mask & address;
+        return key;
+    }
+
+
     enum Types {
         IPV4 = 0x0800,
         ARP = 0x0806,

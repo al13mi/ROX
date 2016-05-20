@@ -4,8 +4,9 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
-#include "Network/RouteTable.h"
-
+#include "System/LookupTree.h"
+#include "Network/ArpTable.h"
+#include <memory>
 enum
 {
     LISTEN_PORT = 6653,
@@ -45,11 +46,8 @@ namespace OpenFlow
         };
         SwitchFeatures switchFeatures;
 
-        Network::RouteTable *m_routeTable;
-
-
-
-        
+        std::unique_ptr<System::LookupTree> m_routeTable;
+        std::unique_ptr<Network::ArpTable> m_arpTable;
     };
 }
 

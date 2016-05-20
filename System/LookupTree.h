@@ -4,19 +4,19 @@
 #include <map>
 #include "../Network/IpAddressV4.h"
 #include "Error.h"
+#include <memory>
 
 namespace System
 {
     struct Node
     {
         Node();
-        Node(const Network::IpAddressV4  &address);
-        Node(const Node &node);
+        Node(const Network::IpAddressV4 &address);
         ~Node();
 
-        Node *left;
-        Node *right;
-        Network::IpAddressV4 *nextHop;
+        std::unique_ptr<Node> left;
+        std::unique_ptr<Node> right;
+        Network::IpAddressV4 nextHop;
         bool end;
     };
 
@@ -24,12 +24,13 @@ namespace System
     {
     public:
         LookupTree();
-        System::Error insert(Node &node);
-        System::Error remove(Node &node);
-        System::Error getMatchingPrefix(Network::IpAddressV4 &nextHop, Network::IpAddressV4 &address);
+        ~LookupTree();
+        System::Error insert(Network::IpAddressV4 &address, uint16_t prefix, Network::IpAddressV4 &nextHop);
+        System::Error remove(Network::IpAddressV4 &address, uint16_t prefix);
+        System::Error getMatchingPrefix(Network::IpAddressV4 &address, Network::IpAddressV4 &result);
 
     private:
-        Node root;
+        std::unique_ptr<Node> root;
     };
 }
 

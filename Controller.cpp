@@ -12,6 +12,8 @@
 #include "OpenFlow/Messages/OxmTLV.h"
 #include "OpenFlow/Messages/PacketInDecoder.h"
 #include "Network/Ethernet.h"
+#include "Network/IpAddressV4.h"
+#include "Network/MacAddress.h"
 
 using namespace std;
 
@@ -37,7 +39,26 @@ namespace OpenFlow
         xid = 1;
         memset(txBuf, 0, BUFFER_SIZE);
 
-        m_routeTable = new Network::RouteTable();
+        m_routeTable = std::unique_ptr<System::LookupTree>(new System::LookupTree());
+        m_arpTable = std::unique_ptr<Network::ArpTable>(new Network::ArpTable());
+
+        // TODO: create an IfInterfaceTable to go from route to egress if number, and MacAddress
+        Network::IpAddressV4 route("192.168.1.0");
+        Network::IpAddressV4 nextHop("192.168.1.254");
+        m_routeTable->insert(route, 24, nextHop);
+
+        Network::IpAddressV4 route2("192.168.2.0");
+        Network::IpAddressV4 nextHop2("192.168.2.254");
+        m_routeTable->insert(route, 24, nextHop);
+
+        // Create an Arp Entry for the next hop.
+        Network::IpAddressV4 address("192.168.1.254");
+        uint64_t mac = 0x520000000001;
+        m_arpTable->insertArpEntry(mac, address);
+
+        Network::IpAddressV4 address2("192.168.2.254");
+        uint64_t mac = 0x530000000001;
+        m_arpTable->insertArpEntry(mac, address2);
     }
 
     void Controller::connectionHandler()
@@ -55,7 +76,6 @@ namespace OpenFlow
     int Controller::rxPacket(uint8_t *buf, ssize_t size)
     {
         print_buf("rx: ", buf, size);
-
 
         OpenFlow::Messages::HeaderDecoder decoder(buf);
         uint16_t type = decoder.getType();
@@ -149,10 +169,28 @@ namespace OpenFlow
             if(htons(Network::IPV4) == etherType)
             {
                 Network::EthernetHeader::IpHeaderV4 *iphdr = (Network::EthernetHeader::IpHeaderV4*)ethernetHeader->optional.type.payload;
+                Network::MacAddress mac(ethernetHeader->sourceMac);
+
+                Network::IpAddressV4 source;
+                Network::IpAddressV4 destination;
+                for(unsigned i = 0; i<4; i++)
+                {
+                    source.data.byte[i] = iphdr->source[i];
+                    dest.data.byte[i] = iphdr->destination[i];
+                }
+
+                // Do a route lookup
+                Network::IpAddressV4 nextHop;
+                m_routeTable.getMatchingPrefix(nextHop);
+
+                // TODO: We need an if interface table.
+
+                // Store off the mac address for this to save time.
+                m_arpTable->insertArpEntry(mac.data.word, address);
             }
             else if(htons(Network::ARP) == etherType)
             {
-                // TODO: marnold support arps.
+                // TODO: implement arp.
             }
 
         }
