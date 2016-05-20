@@ -168,16 +168,15 @@ namespace OpenFlow
             uint16_t etherType =  *((uint16_t*)ethernetHeader->optional.type.ethertype);
             if(htons(Network::IPV4) == etherType)
             {
+                // TODO: All of this code should punt to the maclayer.
                 Network::EthernetHeader::IpHeaderV4 *iphdr = (Network::EthernetHeader::IpHeaderV4*)ethernetHeader->optional.type.payload;
                 Network::MacAddress mac(ethernetHeader->sourceMac);
 
+
                 Network::IpAddressV4 source;
+                source.data.word = (uint32_t)iphdr->source;
                 Network::IpAddressV4 destination;
-                for(unsigned i = 0; i<4; i++)
-                {
-                    source.data.byte[i] = iphdr->source[i];
-                    dest.data.byte[i] = iphdr->destination[i];
-                }
+                destination.data.word = (uint32_t)iphdr->destination;
 
                 // Do a route lookup
                 Network::IpAddressV4 nextHop;
@@ -191,6 +190,8 @@ namespace OpenFlow
             else if(htons(Network::ARP) == etherType)
             {
                 // TODO: implement arp.
+                // TODO: All of this code should punt to the maclayer.
+
             }
 
         }
