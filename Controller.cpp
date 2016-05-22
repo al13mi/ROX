@@ -8,12 +8,18 @@
 #include "OpenFlow/Messages/HeaderEncoder.h"
 #include "OpenFlow/Messages/HelloDecoder.h"
 #include "OpenFlow/Messages/FeaturesDecoder.h"
-#include "OpenFlow/Messages/FlowMatchDecoder.h"
+#include "OpenFlow/Messages/FlowMatchEncoder.h"
 #include "OpenFlow/Messages/OxmTLV.h"
 #include "OpenFlow/Messages/PacketInDecoder.h"
+#include "OpenFlow/Messages/FlowModEncoder.h"
+#include "OpenFlow/Messages/FlowModInstructionEncoder.h"
+#include "OpenFlow/Messages/FlowModActionEncoder.h"
+
 #include "Network/Ethernet.h"
 #include "Network/IpAddressV4.h"
 #include "Network/MacAddress.h"
+
+#define OFP_NO_BUFFER 0xffffffff
 
 using namespace std;
 
@@ -43,6 +49,7 @@ namespace OpenFlow
         m_arpTable = std::unique_ptr<Network::ArpTable>(new Network::ArpTable());
 
         // TODO: create an IfInterfaceTable to go from route to egress if number, and MacAddress
+        /**
         Network::IpAddressV4 route("192.168.1.0");
         Network::IpAddressV4 nextHop("192.168.1.254");
         m_routeTable->insert(route, 24, nextHop);
@@ -57,8 +64,9 @@ namespace OpenFlow
         m_arpTable->insertArpEntry(mac, address);
 
         Network::IpAddressV4 address2("192.168.2.254");
-        uint64_t mac = 0x530000000001;
+        uint64_t mac2 = 0x530000000001;
         m_arpTable->insertArpEntry(mac, address2);
+         **/
     }
 
     void Controller::connectionHandler()
@@ -82,10 +90,10 @@ namespace OpenFlow
 
     #ifdef DEBUG
         cout << "Rxpacket: recv: " << size << " bytes\n";
-        cout << "Version:\t" << header.getVersion() << endl;
-        cout << "Type:\t " << header.getType() << endl;
-        cout << "Length:\t " << header.getLength() << endl;
-        cout << "Xid:\t " << header.getXid() << endl;
+        cout << "Version:\t" << decoder.getVersion() << endl;
+        cout << "Type:\t " << decoder.getType() << endl;
+        cout << "Length:\t " << decoder.getLength() << endl;
+        cout << "Xid:\t " << decoder.getXid() << endl;
     #endif    
 
     
@@ -130,16 +138,17 @@ namespace OpenFlow
         OpenFlow::Messages::HelloDecoder decoder(buf);
         // Check to see if their latest version is our latest version
         uint32_t latestVersion = decoder.getVersion();
+
+        uint16_t msgLength = 0;
         if(version == latestVersion)
         {
             OpenFlow::Messages::HeaderEncoder encoder(txBuf);
-            encoder.setLength(OpenFlow::Messages::HeaderEncoder::HEADER_MINIMUM_LENGTH);
             encoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_FEATURES_REQUEST);
             encoder.setXid(xid++);
             encoder.setVersion(version);
-            txPacket(txBuf, encoder.getLength());
-
-            // Set an exception flow entry in the flow table.
+            encoder.setLength(OpenFlow::Messages::HeaderEncoder::HEADER_MINIMUM_LENGTH);
+            msgLength += encoder.getLength();
+            txPacket(txBuf, msgLength);
         }
         else
         {
@@ -155,6 +164,61 @@ namespace OpenFlow
         switchFeatures.nBuffers = decoder.getNBuffers();
         switchFeatures.nTables = decoder.getNTables();
         switchFeatures.auxiliaryId = decoder.getAuxiliaryId();
+
+        // TODO: put this into a flowTable abstraction.
+        uint8_t newBuf[1500];
+        uint8_t *flowModStart = newBuf;
+        OpenFlow::Messages::FlowModEncoder flowModEncoder(flowModStart);
+        flowModEncoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_FLOW_MOD);
+        flowModEncoder.setXid(xid++);
+        flowModEncoder.setVersion(version);
+
+        flowModEncoder.setCookie(0);
+        flowModEncoder.setCookieMask(0);
+        flowModEncoder.setTableId(0);
+        flowModEncoder.setCommand(OpenFlow::Messages::FlowModEncoder::OFPFC_ADD);
+        flowModEncoder.setIdleTimeout(0);
+        flowModEncoder.setHardTimeout(0);
+        flowModEncoder.setPriority(1);
+        flowModEncoder.setBufferId(OFP_NO_BUFFER);
+        flowModEncoder.setOutGroup(OpenFlow::Messages::FlowModEncoder::OFPG_ANY);
+        flowModEncoder.setFlags(0);
+        flowModEncoder.setOutPort(1);
+
+        uint8_t* match = flowModEncoder.getMatchFieldWritePtr();
+        OpenFlow::Messages::FlowMatchEncoder flowMatchEncoder(match);
+        flowMatchEncoder.setFlowMatchType(OpenFlow::Messages::FlowMatchEncoder::OFPMT_OXM);
+        uint8_t* oxmFields = flowMatchEncoder.getOxmFields();
+
+        OpenFlow::Messages::OxmTLV tlv(oxmFields);
+        tlv.setOxmClass(OpenFlow::Messages::OxmTLV::OFPXMC_OPENFLOW_BASIC); // 16
+        tlv.setOxmField(0); // 8
+        tlv.setOxmValue(1); // 32
+        tlv.setOxmLength(4);
+        flowMatchEncoder.setFlowMatchLength(12);
+
+        uint8_t *endPtr = oxmFields + 12;
+        uint16_t pktLen = endPtr - txBuf;
+
+        uint8_t* flowInstructionEncoderStart = endPtr;
+        OpenFlow::Messages::FlowModInstructionEncoder instruction(endPtr);
+        instruction.setType(OpenFlow::Messages::FlowModInstructionEncoder::OFPIT_APPLY_ACTIONS);
+        instruction.setPadding();
+
+        endPtr += instruction.getLength();
+
+        OpenFlow::Messages::FlowModActionEncoder action(endPtr);
+        action.setType(OpenFlow::Messages::FlowModActionEncoder::OFPAT_OUTPUT);
+        action.setOutputPort(OpenFlow::Messages::FlowModEncoder::OFPP_CONTROLLER);
+        action.setMaxLen(0xffff);
+        action.setPadding();
+        action.setActionLen(action.getLength());
+        endPtr += action.getLength();
+
+        instruction.setLength(endPtr - flowInstructionEncoderStart);
+        flowModEncoder.setLength(endPtr - flowModStart);
+        txPacket(flowModStart, endPtr - flowModStart);
+
     }
 
     void Controller::pktInDecoder(unsigned char *buf, ssize_t size)
@@ -168,29 +232,28 @@ namespace OpenFlow
             uint16_t etherType =  *((uint16_t*)ethernetHeader->optional.type.ethertype);
             if(htons(Network::IPV4) == etherType)
             {
-                // TODO: All of this code should punt to the maclayer.
                 Network::EthernetHeader::IpHeaderV4 *iphdr = (Network::EthernetHeader::IpHeaderV4*)ethernetHeader->optional.type.payload;
                 Network::MacAddress mac(ethernetHeader->sourceMac);
 
-
+                /**
                 Network::IpAddressV4 source;
-                source.data.word = (uint32_t)iphdr->source;
+                source.data.word = ntohl(iphdr->source);
                 Network::IpAddressV4 destination;
-                destination.data.word = (uint32_t)iphdr->destination;
-
+                destination.data.word = ntohl(iphdr->destination);
                 // Do a route lookup
-                Network::IpAddressV4 nextHop;
-                m_routeTable.getMatchingPrefix(nextHop);
+                //Network::IpAddressV4 nextHop;
+                //m_routeTable.getMatchingPrefix(nextHop);
 
                 // TODO: We need an if interface table.
 
                 // Store off the mac address for this to save time.
                 m_arpTable->insertArpEntry(mac.data.word, address);
+                **/
             }
             else if(htons(Network::ARP) == etherType)
             {
                 // TODO: implement arp.
-                // TODO: All of this code should punt to the maclayer.
+
 
             }
 

@@ -30,6 +30,7 @@ namespace System
     {
     }
 
+    // TODO: figure out how to use lambda functions to simplify the crap out of these.
     System::Error LookupTree::insert(Network::IpAddressV4 &address, uint16_t prefix, Network::IpAddressV4 &nextHop)
     {
         Node* current = root.get();

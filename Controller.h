@@ -7,6 +7,8 @@
 #include "System/LookupTree.h"
 #include "Network/ArpTable.h"
 #include <memory>
+#include <stack>
+
 enum
 {
     LISTEN_PORT = 6653,

@@ -95,14 +95,34 @@ namespace OpenFlow
                 return ntohs(p[0]);
             }
 
+            void setOxmClass(uint16_t v)
+            {
+                *(uint16_t*)p = htons(v);
+            }
+
             uint8_t getOxmField()
             {
                 return p[2];
             }
 
+            void setOxmField(uint8_t v)
+            {
+                *(p+2) = v;
+            }
+
             uint8_t getOxmLength()
             {
                 return p[3];
+            }
+
+            void setOxmLength(uint8_t v)
+            {
+                *(p+3) = v;
+            }
+
+            void setOxmValue(uint32_t v)
+            {
+                *(uint32_t*)(p+4) = htonl(v);
             }
         };
     }
