@@ -5,6 +5,7 @@
 #include <bitset>
 #include <string.h>
 
+#include "OpenFlow/EnumTypes.h"
 #include "OpenFlow/Messages/HeaderEncoder.h"
 #include "OpenFlow/Messages/HelloDecoder.h"
 #include "OpenFlow/Messages/FeaturesDecoder.h"
@@ -14,6 +15,7 @@
 #include "OpenFlow/Messages/FlowModEncoder.h"
 #include "OpenFlow/Messages/FlowModInstructionEncoder.h"
 #include "OpenFlow/Messages/FlowModActionEncoder.h"
+
 
 #include "Network/Ethernet.h"
 #include "Network/IpAddressV4.h"
@@ -73,8 +75,8 @@ namespace OpenFlow
     {
         uint8_t buf[1500];
         OpenFlow::Messages::HeaderEncoder encoder(buf);
-        encoder.setLength(OpenFlow::Messages::HeaderEncoder::HEADER_MINIMUM_LENGTH);
-        encoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_HELLO);
+        encoder.setLength(OpenFlow::Messages::HeaderDecoder::HEADER_MINIMUM_LENGTH);
+        encoder.setType(OFPT_HELLO);
         encoder.setXid(xid++);
         encoder.setVersion(version);
         txPacket(encoder.getReadPtr(), encoder.getLength());
@@ -99,22 +101,22 @@ namespace OpenFlow
     
         switch(type)
         {
-            case OpenFlow::Messages::HeaderDecoder::OFPT_HELLO:
+            case OFPT_HELLO:
             {
                 helloHandler(buf, size);
                 break;
             }
-            case OpenFlow::Messages::HeaderDecoder::OFPT_ECHO_REQUEST:
+            case OFPT_ECHO_REQUEST:
             {
                 echoRequestHandler(buf, size);
                 break;
             }
-            case OpenFlow::Messages::HeaderDecoder::OFPT_FEATURES_REPLY:
+            case OFPT_FEATURES_REPLY:
             {
                 featuresReplyHandler(buf, size);
                 break;
             }
-            case OpenFlow::Messages::HeaderDecoder::OFPT_PACKET_IN:
+            case OFPT_PACKET_IN:
             {
                 pktInDecoder(buf, size);
                 break;
@@ -128,7 +130,7 @@ namespace OpenFlow
     {
         OpenFlow::Messages::HeaderEncoder encoder(buf);
         encoder.setVersion(version);
-        encoder.setType(OpenFlow::Messages::HeaderDecoder::OFPT_ECHO_REPLY);
+        encoder.setType(OFPT_ECHO_REPLY);
         encoder.setLength(OpenFlow::Messages::HeaderDecoder::HEADER_MINIMUM_LENGTH);
         txPacket(encoder.getReadPtr(), encoder.getLength());
     }
@@ -143,7 +145,7 @@ namespace OpenFlow
         if(version == latestVersion)
         {
             OpenFlow::Messages::HeaderEncoder encoder(txBuf);
-            encoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_FEATURES_REQUEST);
+            encoder.setType(OFPT_FEATURES_REQUEST);
             encoder.setXid(xid++);
             encoder.setVersion(version);
             encoder.setLength(OpenFlow::Messages::HeaderEncoder::HEADER_MINIMUM_LENGTH);
@@ -169,29 +171,29 @@ namespace OpenFlow
         uint8_t newBuf[1500];
         uint8_t *flowModStart = newBuf;
         OpenFlow::Messages::FlowModEncoder flowModEncoder(flowModStart);
-        flowModEncoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_FLOW_MOD);
+        flowModEncoder.setType(OFPT_FLOW_MOD);
         flowModEncoder.setXid(xid++);
         flowModEncoder.setVersion(version);
 
         flowModEncoder.setCookie(0);
         flowModEncoder.setCookieMask(0);
         flowModEncoder.setTableId(0);
-        flowModEncoder.setCommand(OpenFlow::Messages::FlowModEncoder::OFPFC_ADD);
+        flowModEncoder.setCommand(OFPFC_ADD);
         flowModEncoder.setIdleTimeout(0);
         flowModEncoder.setHardTimeout(0);
         flowModEncoder.setPriority(1);
         flowModEncoder.setBufferId(OFP_NO_BUFFER);
-        flowModEncoder.setOutGroup(OpenFlow::Messages::FlowModEncoder::OFPG_ANY);
+        flowModEncoder.setOutGroup(OFPG_ANY);
         flowModEncoder.setFlags(0);
         flowModEncoder.setOutPort(1);
 
         uint8_t* match = flowModEncoder.getMatchFieldWritePtr();
         OpenFlow::Messages::FlowMatchEncoder flowMatchEncoder(match);
-        flowMatchEncoder.setFlowMatchType(OpenFlow::Messages::FlowMatchEncoder::OFPMT_OXM);
+        flowMatchEncoder.setFlowMatchType(OFPMT_OXM);
         uint8_t* oxmFields = flowMatchEncoder.getOxmFields();
 
         OpenFlow::Messages::OxmTLV tlv(oxmFields);
-        tlv.setOxmClass(OpenFlow::Messages::OxmTLV::OFPXMC_OPENFLOW_BASIC); // 16
+        tlv.setOxmClass(OFPXMC_OPENFLOW_BASIC); // 16
         tlv.setOxmField(0); // 8
         tlv.setOxmValue(1); // 32
         tlv.setOxmLength(4);
@@ -202,14 +204,14 @@ namespace OpenFlow
 
         uint8_t* flowInstructionEncoderStart = endPtr;
         OpenFlow::Messages::FlowModInstructionEncoder instruction(endPtr);
-        instruction.setType(OpenFlow::Messages::FlowModInstructionEncoder::OFPIT_APPLY_ACTIONS);
+        instruction.setType(OFPIT_APPLY_ACTIONS);
         instruction.setPadding();
 
         endPtr += instruction.getLength();
 
         OpenFlow::Messages::FlowModActionEncoder action(endPtr);
-        action.setType(OpenFlow::Messages::FlowModActionEncoder::OFPAT_OUTPUT);
-        action.setOutputPort(OpenFlow::Messages::FlowModEncoder::OFPP_CONTROLLER);
+        action.setType(OFPAT_OUTPUT);
+        action.setOutputPort(OFPP_CONTROLLER);
         action.setMaxLen(0xffff);
         action.setPadding();
         action.setActionLen(action.getLength());
@@ -224,7 +226,7 @@ namespace OpenFlow
     void Controller::pktInDecoder(unsigned char *buf, ssize_t size)
     {
         OpenFlow::Messages::PacketInDecoder decoder(buf);
-        if(decoder.getReason() == OpenFlow::Messages::PacketInDecoder::ofp_packet_in_reason::OFPR_TABLE_MISS)
+        if(decoder.getReason() == OFPR_TABLE_MISS)
         {
             // Parse out the packet.
             unsigned char *pkt = decoder.getEthernetHeader();

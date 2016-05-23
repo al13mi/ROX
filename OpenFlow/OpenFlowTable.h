@@ -3,13 +3,16 @@
 
 #include <map>
 #include <list>
+#include <memory>
 
+
+
+/**
 namespace OpenFlow {
 
     class PacketData {
     public:
-        virtual void buildPacketData(uint8_t *buffer) = 0;
-        virtual void buildTableData(uint8_t *buffer) = 0;
+        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr) = 0;
     };
 
     class OpenFlowAction : public PacketData {
@@ -18,47 +21,69 @@ namespace OpenFlow {
 
     class OpenFlowActionOutput : public OpenFlowAction {
     public:
-        virtual void buildPacketData(uint8_t *buffer);
-        virtual void buildTableData(uint8_t *buffer);
+        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
+        OpenFlowActionOutput(uint32_t port, uint32_t maxLength = 0xffff);
 
     private:
-        uint32_t port;
-        uint16_t maxLength;
+        uint32_t m_port;
+        uint16_t m_maxLength;
     };
 
     class OpenFlowInstruction : public PacketData {
     public:
-        virtual void buildPacketData(uint8_t *buffer);
-        virtual void buildTableData(uint8_t *buffer);
+        OpenFlowInstruction(uint16_t type);
+        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
         virtual void insertAction(OpenFlowAction *action);
     private:
-        uint16_t type;
-        std::list <OpenFlowAction> m_action;
+        uint16_t m_type;
+        std::list <std::unique_ptr<OpenFlowAction>> m_action;
     };
 
     class OpenFlowMatchFields : public PacketData {
     public:
-        virtual void buildPacketData(uint8_t *buffer);
-        virtual void buildTableData(uint8_t *buffer);
+        OpenFlowMatchFields(uint16_t oxmClass, uint8_t field, uint32_t value);
+        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
 
     private:
-        uint16_t oxmClass;
-        uint8_t field;
+        uint16_t m_oxmClass;
+        uint8_t m_field;
+        uint32_t m_value;
     };
 
     class OpenFlowMatch : public PacketData {
     public:
-        OpenFlowMatch(uint16_t type);
+        OpenFlowMatch(uint16_t type,
+                      uint32_t xid,
+                      uint8_t version,
+                      uint16_t priority,
+                      uint32_t outPort,
+                      uint64_t cookie = 0,
+                      uint64_t cookieMask = 0,
+                      uint16_t idleTimeout = 0,
+                      uint16_t hardTimeout = 0
+        );
 
-        virtual void buildPacketData(uint8_t *buffer);
-        virtual void buildTableData(uint8_t *buffer);
+        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
         void insertField(OpenFlowMatchFields *field);
         void insertInstruction(OpenFlowInstruction *instruction);
 
     private:
-        uint16_t type;
-        std::list <OpenFlowMatchFields> m_fields;
-        std::list <OpenFlowInstruction> m_instruction;
+        // OpenFlow Header
+        uint32_t m_xid;
+        uint8_t m_version;
+
+        uint16_t m_priority;
+        uint64_t m_cookie;
+        uint64_t m_cookieMask;
+
+        uint16_t m_idleTimeout;
+        uint16_t m_hardTimeout;
+
+        uint32_t m_outPort;
+
+
+        std::list <std::unique_ptr<OpenFlowMatchFields>> m_fields;
+        std::list <std::unique_ptr<OpenFlowInstruction>> m_instruction;
     };
 
     class OpenFlowTableEntry : public PacketData {
@@ -73,8 +98,7 @@ namespace OpenFlow {
         void setFlags(uint16_t flags);
         void setImportance(uint16_t importance);
 
-        virtual void buildPacketData(uint8_t *buffer);
-        virtual void buildTableData(uint8_t *buffer);
+        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
         void insertMatchCriteria(OpenFlowMatch *match);
 
     private:
@@ -92,18 +116,19 @@ namespace OpenFlow {
         uint16_t m_flags;
         uint16_t m_importance;
 
-        std::list <OpenFlowMatch> match;
+        std::list <std::unique_ptr<OpenFlowMatch>> match;
     };
 
 
     class OpenFlowTable {
     public:
-        OpenFlowTable();
+        OpenFlowTable(){}
 
-        ~OpenFlowTable();
+        ~OpenFlowTable(){}
 
     private:
-        std::map <OpenFlowTableEntry> m_flowTable;
+        std::map <uint64_t, std::unique_ptr<OpenFlowTableEntry>> m_flowTable;
     };
 }
+ **/
 #endif
