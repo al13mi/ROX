@@ -1,5 +1,6 @@
 #include "OpenFlowTable.h"
 
+#include "EnumTypes.h"
 #include "Messages/OxmTLV.h"
 #include "Messages/HeaderEncoder.h"
 #include "Messages/HelloDecoder.h"
@@ -10,12 +11,11 @@
 #include "Messages/FlowModInstructionEncoder.h"
 #include "Messages/FlowModActionEncoder.h"
 
-/**
 namespace OpenFlow {
     void OpenFlowActionOutput::buildPacketData(uint8_t *startPtr, uint8_t *endPtr)
     {
         OpenFlow::Messages::FlowModActionEncoder action(startPtr);
-        action.setType(OpenFlow::Messages::FlowModActionEncoder::OFPAT_OUTPUT);
+        action.setType(OFPAT_OUTPUT);
         action.setOutputPort(m_port);
         action.setMaxLen(0xffff);
         action.setPadding();
@@ -32,7 +32,7 @@ namespace OpenFlow {
     void OpenFlowInstruction::buildPacketData(uint8_t *startPtr, uint8_t *endPtr)
     {
         OpenFlow::Messages::FlowModInstructionEncoder instruction(startPtr);
-        instruction.setType(OpenFlow::Messages::FlowModInstructionEncoder::OFPIT_APPLY_ACTIONS);
+        instruction.setType(OFPIT_APPLY_ACTIONS);
         instruction.setPadding();
         endPtr = startPtr + instruction.getLength();
         uint8_t *ptr = endPtr;
@@ -40,15 +40,15 @@ namespace OpenFlow {
         std::list<std::unique_ptr<OpenFlowAction>>::iterator it;
         for (it = m_action.begin(); it != m_action.end(); ++it)
         {
-            *it->buildPacketData(ptr, ptr);
+            (*it)->buildPacketData(ptr, ptr);
         }
 
         endPtr = ptr;
     }
 
-    void OpenFlowInstruction::insertAction(OpenFlowAction *action)
+    void OpenFlowInstruction::insertAction(std::unique_ptr<OpenFlowAction> action)
     {
-        m_action.push_front(action);
+        m_action.push_front(std::move(action));
     }
 
     OpenFlowInstruction::OpenFlowInstruction(uint16_t type)
@@ -56,16 +56,14 @@ namespace OpenFlow {
     {
 
     }
-
-
+    
     void OpenFlowMatchFields::buildPacketData(uint8_t *start, uint8_t *end)
     {
         OpenFlow::Messages::OxmTLV tlv(start);
-        tlv.setOxmClass(OpenFlow::Messages::OxmTLV::OFPXMC_OPENFLOW_BASIC); // 16
-        tlv.setOxmField(field);
-        tlv.setOxmValue(value);
+        tlv.setOxmClass(OFPXMC_OPENFLOW_BASIC); // 16
+        tlv.setOxmField(m_field);
+        tlv.setOxmValue(m_value);
         tlv.setOxmLength(4);
-        flowMatchEncoder.setFlowMatchLength(12);
         end = start + 12;
     }
 
@@ -76,7 +74,7 @@ namespace OpenFlow {
     {
     }
 
-
+/**
 
     OpenFlowMatch::OpenFlowMatch(
             uint32_t xid,
@@ -150,4 +148,4 @@ namespace OpenFlow {
     }
 
  **/
-//}
+}
