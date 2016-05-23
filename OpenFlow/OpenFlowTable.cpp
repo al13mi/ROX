@@ -11,6 +11,8 @@
 #include "Messages/FlowModInstructionEncoder.h"
 #include "Messages/FlowModActionEncoder.h"
 
+#define OFP_NO_BUFFER 0xffffffff
+
 namespace OpenFlow {
     void OpenFlowActionOutput::buildPacketData(uint8_t *startPtr, uint8_t *endPtr)
     {
@@ -56,7 +58,7 @@ namespace OpenFlow {
     {
 
     }
-    
+
     void OpenFlowMatchFields::buildPacketData(uint8_t *start, uint8_t *end)
     {
         OpenFlow::Messages::OxmTLV tlv(start);
@@ -73,8 +75,6 @@ namespace OpenFlow {
         , m_value(value)
     {
     }
-
-/**
 
     OpenFlowMatch::OpenFlowMatch(
             uint32_t xid,
@@ -94,58 +94,54 @@ namespace OpenFlow {
         , m_cookieMask(cookieMask)
         , m_idleTimeout(idleTimeout)
         , m_hardTimeout(hardTimeout)
-
     {
     }
 
     void OpenFlowMatch::buildPacketData(uint8_t *start, uint8_t *end)
     {
-        OpenFlow::Messages::FlowModEncoder flowModEncoder(flowModStart);
-        flowModEncoder.setType(OpenFlow::Messages::HeaderEncoder::OFPT_FLOW_MOD);
+        OpenFlow::Messages::FlowModEncoder flowModEncoder(start);
+        flowModEncoder.setType(OFPT_FLOW_MOD);
         flowModEncoder.setXid(m_xid);
         flowModEncoder.setVersion(m_version);
 
         flowModEncoder.setCookie(m_cookie);
         flowModEncoder.setCookieMask(m_cookieMask);
         flowModEncoder.setTableId(0);
-        flowModEncoder.setCommand(OpenFlow::Messages::FlowModEncoder::OFPFC_ADD);
+        flowModEncoder.setCommand(OFPFC_ADD);
         flowModEncoder.setIdleTimeout(m_idleTimeout);
         flowModEncoder.setHardTimeout(m_hardTimeout);
         flowModEncoder.setPriority(m_priority);
         flowModEncoder.setBufferId(OFP_NO_BUFFER);
-        flowModEncoder.setOutGroup(OpenFlow::Messages::FlowModEncoder::OFPG_ANY);
+        flowModEncoder.setOutGroup(OFPG_ANY);
         flowModEncoder.setFlags(0);
         flowModEncoder.setOutPort(m_outPort);
 
         uint8_t* match = flowModEncoder.getMatchFieldWritePtr();
         OpenFlow::Messages::FlowMatchEncoder flowMatchEncoder(match);
-        flowMatchEncoder.setFlowMatchType(OpenFlow::Messages::FlowMatchEncoder::OFPMT_OXM);
+        flowMatchEncoder.setFlowMatchType(OFPMT_OXM);
         uint8_t* ptr = flowMatchEncoder.getOxmFields();
 
         std::list<std::unique_ptr<OpenFlowMatchFields>>::iterator it;
         for (it = m_fields.begin(); it != m_fields.end(); ++it)
         {
-            *it->buildPacketData(ptr, ptr);
+            (*it)->buildPacketData(ptr, ptr);
         }
 
         std::list<std::unique_ptr<OpenFlowInstruction>>::iterator instructionIt;
-        for (instructionIt = m_instruction.begin(); it != m_instruction.end(); ++instructionIt)
+        for (instructionIt = m_instruction.begin(); instructionIt != m_instruction.end(); ++instructionIt)
         {
-            *it->buildPacketData(ptr, ptr);
+            (*instructionIt)->buildPacketData(ptr, ptr);
         }
-
-        endPtr = ptr;
+        end = ptr;
     }
 
-    void OpenFlowMatch::insertField(OpenFlowMatchFields *field)
+    void OpenFlowMatch::insertField(std::unique_ptr<OpenFlowMatchFields> field)
     {
-        m_fields.push_front(field);
+        m_fields.push_front(std::move(field));
     }
 
-    void OpenFlowMatch::insertInstruction(OpenFlowInstruction *instruction)
+    void OpenFlowMatch::insertInstruction(std::unique_ptr<OpenFlowInstruction> instruction)
     {
-        m_instruction.push_front(instruction);
+        m_instruction.push_front(std::move(instruction));
     }
-
- **/
 }
