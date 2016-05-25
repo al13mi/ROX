@@ -9,7 +9,7 @@ namespace OpenFlow {
 
     class PacketData {
     public:
-        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr) = 0;
+        virtual uint16_t buildPacketData(uint8_t *startPtr) = 0;
     };
 
     class OpenFlowAction : public PacketData {
@@ -19,7 +19,7 @@ namespace OpenFlow {
     class OpenFlowActionOutput : public OpenFlowAction
     {
     public:
-        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
+        virtual uint16_t buildPacketData(uint8_t *startPtr);
         OpenFlowActionOutput(uint32_t port, uint32_t maxLength = 0xffff);
 
     private:
@@ -30,7 +30,7 @@ namespace OpenFlow {
     class OpenFlowInstruction : public PacketData {
     public:
         OpenFlowInstruction(uint16_t type);
-        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
+        virtual uint16_t buildPacketData(uint8_t *startPtr);
         virtual void insertAction(std::unique_ptr<OpenFlowAction> action);
     private:
         uint16_t m_type;
@@ -40,7 +40,7 @@ namespace OpenFlow {
     class OpenFlowMatchFields : public PacketData {
     public:
         OpenFlowMatchFields(uint16_t oxmClass, uint8_t field, uint32_t value);
-        virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
+        virtual uint16_t buildPacketData(uint8_t *startPtr);
 
     private:
         uint16_t m_oxmClass;
@@ -51,17 +51,9 @@ namespace OpenFlow {
 
 class OpenFlowMatch : public PacketData {
 public:
-    OpenFlowMatch(uint32_t xid,
-                  uint8_t version,
-                  uint16_t priority,
-                  uint32_t outPort,
-                  uint64_t cookie = 0,
-                  uint64_t cookieMask = 0,
-                  uint16_t idleTimeout = 0,
-                  uint16_t hardTimeout = 0
-    );
+    OpenFlowMatch();
 
-    virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
+    virtual uint16_t buildPacketData(uint8_t *startPtr);
     void insertField(std::unique_ptr<OpenFlowMatchFields> field);
     void insertInstruction(std::unique_ptr<OpenFlowInstruction> instruction);
 
@@ -83,12 +75,13 @@ private:
     std::list <std::unique_ptr<OpenFlowInstruction>> m_instruction;
 };
 
-    /**
+
 class OpenFlowTableEntry : public PacketData {
 public:
     OpenFlowTableEntry(uint64_t cookie, uint64_t cookieMask, uint8_t tableId);
 
     void setIdleTimeout(uint16_t idleTimeout);
+    void setHardTimeout(uint16_t hardTimeout);
     void setPriority(uint16_t idleTimeout);
     void setBufferId(uint32_t idleTimeout);
     void setOutPort(uint32_t outPort);
@@ -96,7 +89,7 @@ public:
     void setFlags(uint16_t flags);
     void setImportance(uint16_t importance);
 
-    virtual void buildPacketData(uint8_t *startPtr, uint8_t *endPtr);
+    virtual uint16_t buildPacketData(uint8_t *startPtr);
     void insertMatchCriteria(std::unique_ptr<OpenFlowMatch> match);
 
 private:
@@ -114,20 +107,19 @@ private:
     uint16_t m_flags;
     uint16_t m_importance;
 
-    std::list <std::unique_ptr<OpenFlowMatch>> match;
+    std::list <std::unique_ptr<OpenFlowMatch>> m_match;
 };
-
 
 class OpenFlowTable {
 public:
-    OpenFlowTable(){}
+    OpenFlowTable();
+    ~OpenFlowTable();
 
-    ~OpenFlowTable(){}
+    uint16_t buildExceptionPath(uint8_t *txBuf, uint16_t port);
 
 private:
+    // The key will be CRC32 On the Headers
     std::map <uint64_t, std::unique_ptr<OpenFlowTableEntry>> m_flowTable;
 };
-**/
-
 }
 #endif

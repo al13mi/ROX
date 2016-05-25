@@ -6,6 +6,7 @@
 #include <thread>
 #include "System/LookupTree.h"
 #include "Network/ArpTable.h"
+#include "OpenFlow/OpenFlowTable.h"
 #include <memory>
 #include <stack>
 
@@ -16,9 +17,8 @@ enum
     BUFFER_SIZE = 2000,
 };
 
-
 namespace OpenFlow
-{    
+{
     class Controller
     {
     public:
@@ -51,6 +51,7 @@ namespace OpenFlow
 
         std::unique_ptr<System::LookupTree> m_routeTable;
         std::unique_ptr<Network::ArpTable> m_arpTable;
+        OpenFlowTable m_table;
     };
 }
 

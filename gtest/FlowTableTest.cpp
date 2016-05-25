@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include "OpenFlow/OpenFlowTable.h"
+#include "OpenFlow/EnumTypes.h"
 
 class FlowTableTest : public ::testing::Test
 {
@@ -15,6 +17,7 @@ protected:
 
 };
 
-TEST_F(FlowTableTest, InstantiationTest)
+TEST_F(FlowTableTest, OpenFlowActionOutputTest)
 {
+
 }

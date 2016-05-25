@@ -16,10 +16,14 @@
 #include "OpenFlow/Messages/FlowModInstructionEncoder.h"
 #include "OpenFlow/Messages/FlowModActionEncoder.h"
 
+#include "OpenFlow/OpenFlowTable.h"
 
 #include "Network/Ethernet.h"
 #include "Network/IpAddressV4.h"
 #include "Network/MacAddress.h"
+
+#include <memory>
+
 
 #define OFP_NO_BUFFER 0xffffffff
 
@@ -167,59 +171,10 @@ namespace OpenFlow
         switchFeatures.nTables = decoder.getNTables();
         switchFeatures.auxiliaryId = decoder.getAuxiliaryId();
 
-        // TODO: put this into a flowTable abstraction.
-        uint8_t newBuf[1500];
-        uint8_t *flowModStart = newBuf;
-        OpenFlow::Messages::FlowModEncoder flowModEncoder(flowModStart);
-        flowModEncoder.setType(OFPT_FLOW_MOD);
-        flowModEncoder.setXid(xid++);
-        flowModEncoder.setVersion(version);
-
-        flowModEncoder.setCookie(0);
-        flowModEncoder.setCookieMask(0);
-        flowModEncoder.setTableId(0);
-        flowModEncoder.setCommand(OFPFC_ADD);
-        flowModEncoder.setIdleTimeout(0);
-        flowModEncoder.setHardTimeout(0);
-        flowModEncoder.setPriority(1);
-        flowModEncoder.setBufferId(OFP_NO_BUFFER);
-        flowModEncoder.setOutGroup(OFPG_ANY);
-        flowModEncoder.setFlags(0);
-        flowModEncoder.setOutPort(1);
-
-        uint8_t* match = flowModEncoder.getMatchFieldWritePtr();
-        OpenFlow::Messages::FlowMatchEncoder flowMatchEncoder(match);
-        flowMatchEncoder.setFlowMatchType(OFPMT_OXM);
-        uint8_t* oxmFields = flowMatchEncoder.getOxmFields();
-
-        OpenFlow::Messages::OxmTLV tlv(oxmFields);
-        tlv.setOxmClass(OFPXMC_OPENFLOW_BASIC); // 16
-        tlv.setOxmField(0); // 8
-        tlv.setOxmValue(1); // 32
-        tlv.setOxmLength(4);
-        flowMatchEncoder.setFlowMatchLength(12);
-
-        uint8_t *endPtr = oxmFields + 12;
-        uint16_t pktLen = endPtr - txBuf;
-
-        uint8_t* flowInstructionEncoderStart = endPtr;
-        OpenFlow::Messages::FlowModInstructionEncoder instruction(endPtr);
-        instruction.setType(OFPIT_APPLY_ACTIONS);
-        instruction.setPadding();
-
-        endPtr += instruction.getLength();
-
-        OpenFlow::Messages::FlowModActionEncoder action(endPtr);
-        action.setType(OFPAT_OUTPUT);
-        action.setOutputPort(OFPP_CONTROLLER);
-        action.setMaxLen(0xffff);
-        action.setPadding();
-        action.setActionLen(action.getLength());
-        endPtr += action.getLength();
-
-        instruction.setLength(endPtr - flowInstructionEncoderStart);
-        flowModEncoder.setLength(endPtr - flowModStart);
-        txPacket(flowModStart, endPtr - flowModStart);
+        uint16_t len = m_table.buildExceptionPath(txBuf, 1);
+        txPacket(txBuf, len);
+        len = m_table.buildExceptionPath(buf, 2);
+         txPacket(buf, len);
 
     }
 
@@ -237,20 +192,23 @@ namespace OpenFlow
                 Network::EthernetHeader::IpHeaderV4 *iphdr = (Network::EthernetHeader::IpHeaderV4*)ethernetHeader->optional.type.payload;
                 Network::MacAddress mac(ethernetHeader->sourceMac);
 
-                /**
+
                 Network::IpAddressV4 source;
-                source.data.word = ntohl(iphdr->source);
-                Network::IpAddressV4 destination;
-                destination.data.word = ntohl(iphdr->destination);
-                // Do a route lookup
-                //Network::IpAddressV4 nextHop;
-                //m_routeTable.getMatchingPrefix(nextHop);
 
-                // TODO: We need an if interface table.
+                uint32_t *temp = (uint32_t*)iphdr->source;
+                source.data.word = ntohl(*temp);
+                /**
+Network::IpAddressV4 destination;
+destination.data.word = ntohl(iphdr->destination);
+// Do a route lookup
+//Network::IpAddressV4 nextHop;
+//m_routeTable.getMatchingPrefix(nextHop);
 
-                // Store off the mac address for this to save time.
-                m_arpTable->insertArpEntry(mac.data.word, address);
-                **/
+// TODO: We need an if interface table.
+
+// Store off the mac address for this to save time.
+m_arpTable->insertArpEntry(mac.data.word, address);
+**/
             }
             else if(htons(Network::ARP) == etherType)
             {

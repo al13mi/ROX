@@ -15,7 +15,7 @@ OBJS += OpenFlow/Messages/FlowModEncoder.o
 OBJS += OpenFlow/Messages/FlowModInstructionEncoder.o
 OBJS += OpenFlow/Messages/FlowModActionEncoder.o
 
-TESTS = gtest/Test.o gtest/Router.o gtest/LookupTreeTest.o gtest/IpAddressTest.o gtest/ArpTableTest.o
+TESTS = gtest/Test.o gtest/Router.o gtest/LookupTreeTest.o gtest/IpAddressTest.o gtest/ArpTableTest.o gtest/FlowTableTest.o
 MAIN=controller
 CFLAGS=-I$(realpath ../) -pthread -I. -g -msse4.2 -O0 -std=gnu++11 -L/usr/lib/x86_64-linux-gnu/ -L/usr/local/lib -levent -fsanitize=address -pedantic -Wall
 CFLAGS_TEST = -DTESTMAIN
