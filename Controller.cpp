@@ -55,24 +55,24 @@ namespace OpenFlow
         m_arpTable = std::unique_ptr<Network::ArpTable>(new Network::ArpTable());
 
         // TODO: create an IfInterfaceTable to go from route to egress if number, and MacAddress
-        /**
-        Network::IpAddressV4 route("192.168.1.0");
-        Network::IpAddressV4 nextHop("192.168.1.254");
+
+        // 192.168.1.*
+        Network::IpAddressV4 route(3232235776);
+        Network::IpAddressV4 nextHop(3232236030);
         m_routeTable->insert(route, 24, nextHop);
 
-        Network::IpAddressV4 route2("192.168.2.0");
-        Network::IpAddressV4 nextHop2("192.168.2.254");
-        m_routeTable->insert(route, 24, nextHop);
+        Network::IpAddressV4 route2(3232236032);
+        Network::IpAddressV4 nextHop2(3232236286);
+        m_routeTable->insert(route2, 24, nextHop2);
 
         // Create an Arp Entry for the next hop.
-        Network::IpAddressV4 address("192.168.1.254");
+        Network::IpAddressV4 address(3232236030);
         uint64_t mac = 0x520000000001;
         m_arpTable->insertArpEntry(mac, address);
 
-        Network::IpAddressV4 address2("192.168.2.254");
+        Network::IpAddressV4 address2(3232236032);
         uint64_t mac2 = 0x530000000001;
-        m_arpTable->insertArpEntry(mac, address2);
-         **/
+        m_arpTable->insertArpEntry(mac2, address2);
     }
 
     void Controller::connectionHandler()
@@ -181,7 +181,7 @@ namespace OpenFlow
     void Controller::pktInDecoder(unsigned char *buf, ssize_t size)
     {
         OpenFlow::Messages::PacketInDecoder decoder(buf);
-        if(decoder.getReason() == OFPR_TABLE_MISS)
+        if(decoder.getReason() == OFPR_APPLY_ACTION)
         {
             // Parse out the packet.
             unsigned char *pkt = decoder.getEthernetHeader();
@@ -189,26 +189,22 @@ namespace OpenFlow
             uint16_t etherType =  *((uint16_t*)ethernetHeader->optional.type.ethertype);
             if(htons(Network::IPV4) == etherType)
             {
-                Network::EthernetHeader::IpHeaderV4 *iphdr = (Network::EthernetHeader::IpHeaderV4*)ethernetHeader->optional.type.payload;
-                Network::MacAddress mac(ethernetHeader->sourceMac);
+                Network::IpHeaderV4 *iphdr = (Network::IpHeaderV4*)ethernetHeader->optional.type.payload;
 
+                uint32_t *temp = (uint32_t*)(iphdr->destination);
+                Network::IpAddressV4 addr(ntohl(*temp));
 
-                Network::IpAddressV4 source;
+                // TODO: Check to see if we have a flow hit.
+                Network::FlowIndexV4 index(iphdr);
 
-                uint32_t *temp = (uint32_t*)iphdr->source;
-                source.data.word = ntohl(*temp);
-                /**
-Network::IpAddressV4 destination;
-destination.data.word = ntohl(iphdr->destination);
-// Do a route lookup
-//Network::IpAddressV4 nextHop;
-//m_routeTable.getMatchingPrefix(nextHop);
+                // There wasn't a flow hit so lets do a route lookup.
+                Network::IpAddressV4 nextHop;
+                m_routeTable->getMatchingPrefix(addr, nextHop);
 
-// TODO: We need an if interface table.
+                uint64_t mac;
+                m_arpTable->findArpEntry(mac, nextHop);
 
-// Store off the mac address for this to save time.
-m_arpTable->insertArpEntry(mac.data.word, address);
-**/
+                // Lookup the source Interface table (which means I need an interface table).
             }
             else if(htons(Network::ARP) == etherType)
             {
