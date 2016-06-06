@@ -20,7 +20,8 @@ namespace OpenFlow
             void setOxmField(uint8_t v);
             uint8_t getOxmLength();
             void setOxmLength(uint8_t v);
-            void setOxmValue(uint32_t v);        };
+            void setOxmValue(uint64_t v, uint32_t len = 4);
+        };
     }
 }
 #endif

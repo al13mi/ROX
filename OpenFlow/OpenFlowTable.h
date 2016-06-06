@@ -4,6 +4,8 @@
 #include <map>
 #include <list>
 #include <memory>
+#include "Network/Ethernet.h"
+
 
 namespace OpenFlow {
 
@@ -14,6 +16,26 @@ namespace OpenFlow {
 
     class OpenFlowAction : public PacketData {
         uint16_t type;
+    };
+
+    class OpenFlowSetL2Src : public OpenFlowAction
+    {
+    public:
+        virtual uint16_t buildPacketData(uint8_t *startPtr);
+        OpenFlowSetL2Src(uint64_t src);
+
+    private:
+        uint64_t m_src;
+    };
+
+    class OpenFlowSetL2Dst : public OpenFlowAction
+    {
+    public:
+        virtual uint16_t buildPacketData(uint8_t *startPtr);
+        OpenFlowSetL2Dst(uint64_t dst);
+
+    private:
+        uint64_t m_dst;
     };
 
     class OpenFlowActionOutput : public OpenFlowAction
@@ -39,13 +61,14 @@ namespace OpenFlow {
 
     class OpenFlowMatchFields : public PacketData {
     public:
-        OpenFlowMatchFields(uint16_t oxmClass, uint8_t field, uint32_t value);
+        OpenFlowMatchFields(uint16_t oxmClass, uint8_t field, uint64_t value);
         virtual uint16_t buildPacketData(uint8_t *startPtr);
 
     private:
         uint16_t m_oxmClass;
         uint8_t m_field;
-        uint32_t m_value;
+        uint64_t m_value;
+        uint32_t len;
     };
 
 
@@ -116,10 +139,12 @@ public:
     ~OpenFlowTable();
 
     uint16_t buildExceptionPath(uint8_t *txBuf, uint16_t port);
+    void addFlowEntryFromIndexV4(Network::FlowIndexV4 *index);
+    uint16_t addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowIndexV4 *index, uint16_t port, uint64_t srcMac, uint64_t dstMac);
 
 private:
     // The key will be CRC32 On the Headers
-    std::map <uint64_t, std::unique_ptr<OpenFlowTableEntry>> m_flowTable;
+    std::map <uint32_t, std::unique_ptr<OpenFlowTableEntry>> m_flowTable;
 };
 }
 #endif

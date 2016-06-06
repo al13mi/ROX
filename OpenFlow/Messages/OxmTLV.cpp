@@ -26,12 +26,13 @@ namespace OpenFlow
 
         uint8_t OxmTLV::getOxmField()
         {
-            return p[2];
+            return p[2] >> 1;
         }
 
         void OxmTLV::setOxmField(uint8_t v)
         {
-            *(p+2) = v;
+            uint8_t temp = v << 1;
+            *(p+2) = temp;
         }
 
         uint8_t OxmTLV::getOxmLength()
@@ -44,9 +45,29 @@ namespace OpenFlow
             *(p+3) = v;
         }
 
-        void OxmTLV::setOxmValue(uint32_t v)
+        void OxmTLV::setOxmValue(uint64_t v, uint32_t len)
         {
-            *(uint32_t*)(p+4) = htonl(v);
+            switch(len)
+            {
+                case 1:
+                    *(uint8_t*)(p+4) = v;
+                    break;
+                case 2:
+                    *(uint16_t*)(p+4) = htons(v);
+                    break;
+                case 4:
+                    *(uint32_t*)(p+4) = htonl(v);
+                    break;
+                case 6:
+                    uint8_t* temp = (uint8_t*)&v;
+                    for(uint32_t n = 0; n<6; n++)
+                    {
+                        *(uint8_t*)(p+ 4 + n) = temp[5 - n];
+                    }
+                    break;
+
+            }
+
         }
     }
 }

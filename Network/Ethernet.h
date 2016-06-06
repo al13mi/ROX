@@ -5,6 +5,7 @@
 
 enum { IP_PROTO_TCP         = 6   };   // protocol type for TCP packets
 enum { IP_PROTO_UDP         = 17  };   // protocol type for UDP packets
+enum { IP_PROTO_EXP         = 253 };
 
 namespace Network {
 

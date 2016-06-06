@@ -70,7 +70,7 @@ namespace OpenFlow
         uint64_t mac = 0x520000000001;
         m_arpTable->insertArpEntry(mac, address);
 
-        Network::IpAddressV4 address2(3232236032);
+        Network::IpAddressV4 address2(3232236286);
         uint64_t mac2 = 0x530000000001;
         m_arpTable->insertArpEntry(mac2, address2);
     }
@@ -171,16 +171,37 @@ namespace OpenFlow
         switchFeatures.nTables = decoder.getNTables();
         switchFeatures.auxiliaryId = decoder.getAuxiliaryId();
 
+
         uint16_t len = m_table.buildExceptionPath(txBuf, 1);
+
+
+        OpenFlow::Messages::HeaderEncoder encoder(txBuf);
+        encoder.setType(OFPT_FLOW_MOD);
+        encoder.setXid(xid++);
+        encoder.setVersion(version);
+
+        // uint32_t pad = 8 - len%8;
+
+        encoder.setLength(len);
         txPacket(txBuf, len);
-        len = m_table.buildExceptionPath(buf, 2);
-         txPacket(buf, len);
+
+        len = m_table.buildExceptionPath(txBuf, 2);
+
+        encoder.setLength(len);
+
+        txPacket(txBuf, len);
 
     }
 
     void Controller::pktInDecoder(unsigned char *buf, ssize_t size)
     {
         OpenFlow::Messages::PacketInDecoder decoder(buf);
+
+        OpenFlow::Messages::HeaderEncoder encoder(txBuf);
+        encoder.setType(OFPT_FLOW_MOD);
+        encoder.setXid(xid++);
+        encoder.setVersion(version);
+
         if(decoder.getReason() == OFPR_APPLY_ACTION)
         {
             // Parse out the packet.
@@ -205,12 +226,14 @@ namespace OpenFlow
                 m_arpTable->findArpEntry(mac, nextHop);
 
                 // Lookup the source Interface table (which means I need an interface table).
+                uint16_t len = m_table.addFlowEntryFromIndexV4(txBuf, &index, 2, 0x5200000000AA, mac);
+                encoder.setLength(len);
+
+                txPacket(txBuf, len);
             }
             else if(htons(Network::ARP) == etherType)
             {
                 // TODO: implement arp.
-
-
             }
 
         }
