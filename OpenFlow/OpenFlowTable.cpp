@@ -11,6 +11,7 @@
 #include "Messages/FlowModInstructionEncoder.h"
 #include "Messages/FlowModActionEncoder.h"
 #include "System/crc32.h"
+#include <chrono>
 
 extern void txPacket(unsigned char *buf, ssize_t size);
 
@@ -356,112 +357,198 @@ namespace OpenFlow {
         return len;
     }
 
+    void OpenFlowTable::removeFlowEntryByCRC(uint32_t crc)
+    {
+        auto search = m_flowTable.find(crc);
+        if(search != m_flowTable.end())
+        {
+            m_flowTable.erase(search);
+        }
+    }
+
     uint16_t OpenFlowTable::addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowIndexV4 *index, uint16_t port, uint64_t srcMac, uint64_t dstMac)
     {
-
+        uint16_t len  = 0;
 
         uint32_t crc = rte_hash_crc(index->contents.byteKey, index->BYTE_KEY_SIZE, 0);
 
-        uint8_t protocol = index->contents.ip.protocol;
-        uint8_t dscp = index->contents.ip.dscp;
-        uint32_t srcIp = htonl(index->contents.ip.srcIp);
-        uint32_t dstIp = htonl(index->contents.ip.destIp);
+        // Add this Index to the cache
+        addFlowStatsToCache(crc, index);
 
-
-        // Build the match criteria
-        std::unique_ptr<OpenFlow::OpenFlowMatch> match
-                = std::unique_ptr<OpenFlow::OpenFlowMatch>(new OpenFlow::OpenFlowMatch());
-
-        switch(protocol)
-        {
-            case IP_PROTO_TCP:
-            case IP_PROTO_UDP:
-
-                uint32_t srcPort = index->contents.ip.protocolSpecific.tcpUdp.srcPort;
-                uint32_t dstPort = index->contents.ip.protocolSpecific.tcpUdp.destPort;
-
-                uint8_t srcField = 0;
-                uint8_t dstField = 0;
-
-                if(protocol == IP_PROTO_TCP)
-                {
-                    srcField = OFPXMT_OFB_TCP_SRC;
-                    dstField = OFPXMT_OFB_TCP_DST;
-                }
-                else if(protocol == IP_PROTO_UDP)
-                {
-                    srcField = OFPXMT_OFB_UDP_SRC;
-                    dstField = OFPXMT_OFB_UDP_DST;
-                }
-
-                std::unique_ptr<OpenFlow::OpenFlowMatchFields> src
-                        = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(new  OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, srcField, srcPort));
-                match->insertField(std::move(src));
-
-                std::unique_ptr<OpenFlow::OpenFlowMatchFields> dst
-                        = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(new  OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, dstField, dstPort));
-                match->insertField(std::move(dst));
-                break;
-        }
-
-
-        std::unique_ptr<OpenFlow::OpenFlowMatchFields> ipProtocolField
-                = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(new  OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_IP_PROTO, protocol));
-        match->insertField(std::move(ipProtocolField));
-
-        std::unique_ptr<OpenFlow::OpenFlowMatchFields> dstIpField
-                = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(new  OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_IPV4_DST, dstIp));
-        match->insertField(std::move(dstIpField));
-
-        std::unique_ptr<OpenFlow::OpenFlowMatchFields> srcIpField
-                = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(new  OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_IPV4_SRC, srcIp));
-        match->insertField(std::move(srcIpField));
-
-        std::unique_ptr<OpenFlow::OpenFlowMatchFields> dscpField
-                = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(new  OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_IP_DSCP, dscp));
-        match->insertField(std::move(dscpField));
-
-        std::unique_ptr<OpenFlow::OpenFlowMatchFields> ethTypeField
-                = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(new  OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_ETH_TYPE, 0x800));
-        match->insertField(std::move(ethTypeField));
-
-        std::unique_ptr<OpenFlow::OpenFlowTableEntry> entry =
+        // Check to see if we already have an entry for this.
+        std::unique_ptr<OpenFlow::OpenFlowTableEntry> entry;
                 std::unique_ptr<OpenFlow::OpenFlowTableEntry>(new OpenFlow::OpenFlowTableEntry(crc, 0xFFFFFFFFFFFFFFFF, 0));
 
-        entry->setIdleTimeout(10);
-        entry->setHardTimeout(20);
-        entry->setPriority(10000);
-        entry->setBufferId(OFP_NO_BUFFER);
-        entry->setOutGroup(OFPG_ANY);
-        entry->setFlags(1);
-        entry->setOutPort(port);
+        auto search = m_flowTable.find(crc);
+        if(search == m_flowTable.end())
+        {
+            std::cout << "Adding Flow Id: " << crc << "\n";
 
-        std::unique_ptr<OpenFlow::OpenFlowActionOutput> outputAction
-                = std::unique_ptr<OpenFlow::OpenFlowActionOutput>(new OpenFlow::OpenFlowActionOutput(port));
+            entry = std::unique_ptr<OpenFlow::OpenFlowTableEntry>(
+                    new OpenFlow::OpenFlowTableEntry(crc, 0xFFFFFFFFFFFFFFFF, 0));
 
-        std::unique_ptr<OpenFlow::OpenFlowInstruction> instruction
-                = std::unique_ptr<OpenFlow::OpenFlowInstruction>(new OpenFlow::OpenFlowInstruction(OFPIT_APPLY_ACTIONS));
-
-        instruction->insertAction(std::move(outputAction));
-
-        std::unique_ptr<OpenFlow::OpenFlowSetL2Src> srcMacModAction
-                = std::unique_ptr<OpenFlow::OpenFlowSetL2Src>(new OpenFlow::OpenFlowSetL2Src(srcMac));
-
-        instruction->insertAction(std::move(srcMacModAction));
-
-        std::unique_ptr<OpenFlow::OpenFlowSetL2Dst> dstMacModAction
-                = std::unique_ptr<OpenFlow::OpenFlowSetL2Dst>(new OpenFlow::OpenFlowSetL2Dst(dstMac));
-
-        instruction->insertAction(std::move(dstMacModAction));
+            uint8_t protocol = index->contents.ip.protocol;
+            uint8_t dscp = index->contents.ip.dscp;
+            uint32_t srcIp = htonl(index->contents.ip.srcIp);
+            uint32_t dstIp = htonl(index->contents.ip.destIp);
 
 
+            // Build the match criteria
+            std::unique_ptr <OpenFlow::OpenFlowMatch> match
+                    = std::unique_ptr<OpenFlow::OpenFlowMatch>(new OpenFlow::OpenFlowMatch());
 
-        match->insertInstruction(std::move(instruction));
+            switch (protocol) {
+                case IP_PROTO_TCP:
+                case IP_PROTO_UDP:
 
-        entry->insertMatchCriteria(std::move(match));
-        uint16_t len = entry->buildPacketData(txBuf);
+                    uint32_t srcPort = index->contents.ip.protocolSpecific.tcpUdp.srcPort;
+                    uint32_t dstPort = index->contents.ip.protocolSpecific.tcpUdp.destPort;
 
-        m_flowTable.insert(std::make_pair(crc, std::move(entry)));
+                    uint8_t srcField = 0;
+                    uint8_t dstField = 0;
+
+                    if (protocol == IP_PROTO_TCP) {
+                        srcField = OFPXMT_OFB_TCP_SRC;
+                        dstField = OFPXMT_OFB_TCP_DST;
+                    }
+                    else if (protocol == IP_PROTO_UDP) {
+                        srcField = OFPXMT_OFB_UDP_SRC;
+                        dstField = OFPXMT_OFB_UDP_DST;
+                    }
+
+                    std::unique_ptr <OpenFlow::OpenFlowMatchFields> src
+                            = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(
+                                    new OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, srcField, srcPort));
+                    match->insertField(std::move(src));
+
+                    std::unique_ptr <OpenFlow::OpenFlowMatchFields> dst
+                            = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(
+                                    new OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, dstField, dstPort));
+                    match->insertField(std::move(dst));
+                    break;
+            }
+
+
+            std::unique_ptr <OpenFlow::OpenFlowMatchFields> ipProtocolField
+                    = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(
+                            new OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_IP_PROTO, protocol));
+            match->insertField(std::move(ipProtocolField));
+
+            std::unique_ptr <OpenFlow::OpenFlowMatchFields> dstIpField
+                    = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(
+                            new OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_IPV4_DST, dstIp));
+            match->insertField(std::move(dstIpField));
+
+            std::unique_ptr <OpenFlow::OpenFlowMatchFields> srcIpField
+                    = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(
+                            new OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_IPV4_SRC, srcIp));
+            match->insertField(std::move(srcIpField));
+
+            std::unique_ptr <OpenFlow::OpenFlowMatchFields> dscpField
+                    = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(
+                            new OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_IP_DSCP, dscp));
+            match->insertField(std::move(dscpField));
+
+            std::unique_ptr <OpenFlow::OpenFlowMatchFields> ethTypeField
+                    = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(
+                            new OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_ETH_TYPE, 0x800));
+            match->insertField(std::move(ethTypeField));
+
+
+            entry->setIdleTimeout(10);
+            entry->setHardTimeout(20);
+            entry->setPriority(10000);
+            entry->setBufferId(OFP_NO_BUFFER);
+            entry->setOutGroup(OFPG_ANY);
+            entry->setFlags(1);
+            entry->setOutPort(port);
+
+            std::unique_ptr <OpenFlow::OpenFlowActionOutput> outputAction
+                    = std::unique_ptr<OpenFlow::OpenFlowActionOutput>(new OpenFlow::OpenFlowActionOutput(port));
+
+            std::unique_ptr <OpenFlow::OpenFlowInstruction> instruction
+                    = std::unique_ptr<OpenFlow::OpenFlowInstruction>(
+                            new OpenFlow::OpenFlowInstruction(OFPIT_APPLY_ACTIONS));
+
+            instruction->insertAction(std::move(outputAction));
+
+            std::unique_ptr <OpenFlow::OpenFlowSetL2Src> srcMacModAction
+                    = std::unique_ptr<OpenFlow::OpenFlowSetL2Src>(new OpenFlow::OpenFlowSetL2Src(srcMac));
+
+            instruction->insertAction(std::move(srcMacModAction));
+
+            std::unique_ptr <OpenFlow::OpenFlowSetL2Dst> dstMacModAction
+                    = std::unique_ptr<OpenFlow::OpenFlowSetL2Dst>(new OpenFlow::OpenFlowSetL2Dst(dstMac));
+
+            instruction->insertAction(std::move(dstMacModAction));
+            match->insertInstruction(std::move(instruction));
+            entry->insertMatchCriteria(std::move(match));
+            len = entry->buildPacketData(txBuf);
+            m_flowTable.insert(std::make_pair(crc, std::move(entry)));
+
+        }
+        else
+        {
+            len = search->second->buildPacketData(txBuf);
+        }
+
         return len;
+    }
+
+    void OpenFlowTable::addFlowResults(uint32_t crc, uint32_t durationNSec, uint64_t packetCount, uint64_t byteCount)
+    {
+        // Find the flow stats entry
+        auto search = m_flowStatsByCRC.find(crc);
+        if(search != m_flowStatsByCRC.end())
+        {
+            std::unique_ptr<FlowStats> flowStatsCopy = std::unique_ptr<FlowStats>(new FlowStats());
+            flowStatsCopy->timestamp = search->second->timestamp;
+            std::cout << " Timestamp: " << flowStatsCopy->timestamp << "\n";
+
+            flowStatsCopy->crc = crc;
+            flowStatsCopy->durationNSec = durationNSec;
+            flowStatsCopy->packetCount = packetCount;
+            flowStatsCopy->byteCount = byteCount;
+            m_flowResults.push_back(std::move(flowStatsCopy));
+
+            m_flowStatsByCRC.erase(search);
+        }
+        else
+        {
+            std::cout << "Error: Flow Stats Entry Not Found\n";
+        }
+
+    }
+
+    void OpenFlowTable::removeStatsFromCache(uint32_t crc)
+    {
+        auto search = m_flowStatsByCRC.find(crc);
+        if(search != m_flowStatsByCRC.end())
+        {
+            m_flowStatsByCRC.erase(search);
+        }
+        else
+        {
+            std::cout << "Tried to remove a non existing stats entry\n";
+        }
+    }
+
+    void OpenFlowTable::addFlowStatsToCache(uint32_t crc, Network::FlowIndexV4 *index)
+    {
+        auto search = m_flowStatsByCRC.find(crc);
+
+        if(index != NULL && search == m_flowStatsByCRC.end())
+        {
+
+            std::unique_ptr<FlowStats> flowStats = std::unique_ptr<FlowStats>(new FlowStats());
+            std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+                    std::chrono::system_clock::now().time_since_epoch()
+            );
+
+            flowStats->index = *index;
+            flowStats->timestamp = ms.count();
+
+            m_flowStatsByCRC.insert(std::pair<uint32_t, std::unique_ptr<FlowStats>>(crc, std::move(flowStats)));
+        }
     }
 }

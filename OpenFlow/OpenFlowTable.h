@@ -133,6 +133,16 @@ private:
     std::list <std::unique_ptr<OpenFlowMatch>> m_match;
 };
 
+struct FlowStats
+{
+    uint32_t crc;
+    uint32_t durationNSec;
+    uint64_t packetCount;
+    uint64_t byteCount;
+    uint64_t timestamp;
+    Network::FlowIndexV4 index;
+};
+
 class OpenFlowTable {
 public:
     OpenFlowTable();
@@ -141,10 +151,24 @@ public:
     uint16_t buildExceptionPath(uint8_t *txBuf, uint16_t port);
     void addFlowEntryFromIndexV4(Network::FlowIndexV4 *index);
     uint16_t addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowIndexV4 *index, uint16_t port, uint64_t srcMac, uint64_t dstMac);
+    void addFlowResults(uint32_t crc, uint32_t durationNSec, uint64_t packetCount, uint64_t byteCount);
+    void removeFlowEntryByCRC(uint32_t crc);
+    void addFlowStatsToCache(uint32_t crc, Network::FlowIndexV4 *index);
+
+    void removeStatsFromCache(uint32_t crc);
+    void addStatsToCache(uint32_t crc, Network::FlowIndexV4 *index);
 
 private:
     // The key will be CRC32 On the Headers
     std::map <uint32_t, std::unique_ptr<OpenFlowTableEntry>> m_flowTable;
+
+    // List of flow results by Flow Insertion Time.
+    std::list <std::unique_ptr<FlowStats>> m_flowResults;
+
+    // Cache to store the FlowIndex by CRC.
+    std::map <uint32_t, std::unique_ptr<FlowStats>> m_flowStatsByCRC;
+
+
 };
 }
 #endif

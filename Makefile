@@ -14,6 +14,7 @@ OBJS += OpenFlow/Messages/PacketInDecoder.o
 OBJS += OpenFlow/Messages/FlowModEncoder.o
 OBJS += OpenFlow/Messages/FlowModInstructionEncoder.o
 OBJS += OpenFlow/Messages/FlowModActionEncoder.o
+OBJS += OpenFlow/Messages/FlowRemovedDecoder.o
 
 TESTS = gtest/Test.o gtest/Router.o gtest/LookupTreeTest.o gtest/IpAddressTest.o gtest/ArpTableTest.o gtest/FlowTableTest.o
 MAIN=controller

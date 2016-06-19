@@ -15,6 +15,7 @@
 #include "OpenFlow/Messages/FlowModEncoder.h"
 #include "OpenFlow/Messages/FlowModInstructionEncoder.h"
 #include "OpenFlow/Messages/FlowModActionEncoder.h"
+#include "OpenFlow/Messages/FlowRemovedDecoder.h"
 
 #include "OpenFlow/OpenFlowTable.h"
 
@@ -24,6 +25,9 @@
 
 #include <memory>
 
+#include <thread>
+#include <mutex>
+
 
 #define OFP_NO_BUFFER 0xffffffff
 
@@ -31,25 +35,71 @@ using namespace std;
 
 extern void txPacket(unsigned char *buf, ssize_t size);
 
-static void print_buf(const char *title, const unsigned char *buf, size_t buf_len)
-{
-#ifdef DEBUG
-    size_t i = 0;
-    fprintf(stdout, "\n%s\n", title);
-    for(i = 0; i < buf_len; ++i)
-    fprintf(stdout, "%02X%s", buf[i],
-    ( i + 1 ) % 16 == 0 ? "\r\n" : " " );
-    printf("\n");
-#endif
-}
+namespace OpenFlow {
+    void Controller::ControllerThread() {
+        while (true)
+        {
+            rxHandler();
+        }
+    }
 
-namespace OpenFlow
-{
+    uint32_t Controller::getMessageLength(uint8_t *buf, ssize_t size)
+    {
+
+            OpenFlow::Messages::HeaderDecoder decoder(buf);
+            return decoder.getLength();
+
+    }
+
+
+    void Controller::rxHandler()
+    {
+        std::lock_guard<std::mutex> guard(rxLock);
+        if (read != write)
+        {
+            Mbuf *mbuf;
+            {
+
+                mbuf = &rxRingBuf[read];
+                read = (read + 1) % BUFFER_SIZE;
+            }
+
+            uint8_t *buf = mbuf->buf;
+
+            OpenFlow::Messages::HeaderDecoder decoder(buf);
+            uint16_t type = decoder.getType();
+            uint32_t length = decoder.getLength();
+
+            switch (type) {
+                case OFPT_HELLO: {
+                    helloHandler(buf, length);
+                    break;
+                }
+                case OFPT_ECHO_REQUEST: {
+                    echoRequestHandler(buf, length);
+                    break;
+                }
+                case OFPT_FEATURES_REPLY: {
+                    featuresReplyHandler(buf, length);
+                    break;
+                }
+                case OFPT_PACKET_IN: {
+                    pktInDecoder(buf, length);
+                    break;
+                }
+                case OFPT_FLOW_REMOVED: {
+                    flowRemovedHandler(buf, length);
+                    break;
+                }
+            }
+        }
+    }
+
     Controller::Controller()
     {
         version = 0x5;
         xid = 1;
-        memset(txBuf, 0, BUFFER_SIZE);
+        memset(rxRingBuf, 0, BUFFER_SIZE);
 
         m_routeTable = std::unique_ptr<System::LookupTree>(new System::LookupTree());
         m_arpTable = std::unique_ptr<Network::ArpTable>(new Network::ArpTable());
@@ -73,6 +123,9 @@ namespace OpenFlow
         Network::IpAddressV4 address2(3232236286);
         uint64_t mac2 = 0x530000000001;
         m_arpTable->insertArpEntry(mac2, address2);
+
+        std::thread thr(&Controller::ControllerThread, this);
+        std::swap(thr, T);
     }
 
     void Controller::connectionHandler()
@@ -86,47 +139,14 @@ namespace OpenFlow
         txPacket(encoder.getReadPtr(), encoder.getLength());
     }
 
-
     int Controller::rxPacket(uint8_t *buf, ssize_t size)
     {
-        print_buf("rx: ", buf, size);
+        std::lock_guard<std::mutex> guard(rxLock);
 
-        OpenFlow::Messages::HeaderDecoder decoder(buf);
-        uint16_t type = decoder.getType();
+        memcpy(rxRingBuf[write].buf, buf, size);
+        rxRingBuf[write].size = size;
+        write = (write + 1) % BUFFER_SIZE;
 
-    #ifdef DEBUG
-        cout << "Rxpacket: recv: " << size << " bytes\n";
-        cout << "Version:\t" << decoder.getVersion() << endl;
-        cout << "Type:\t " << decoder.getType() << endl;
-        cout << "Length:\t " << decoder.getLength() << endl;
-        cout << "Xid:\t " << decoder.getXid() << endl;
-    #endif    
-
-    
-        switch(type)
-        {
-            case OFPT_HELLO:
-            {
-                helloHandler(buf, size);
-                break;
-            }
-            case OFPT_ECHO_REQUEST:
-            {
-                echoRequestHandler(buf, size);
-                break;
-            }
-            case OFPT_FEATURES_REPLY:
-            {
-                featuresReplyHandler(buf, size);
-                break;
-            }
-            case OFPT_PACKET_IN:
-            {
-                pktInDecoder(buf, size);
-                break;
-            }
-
-        }
         return 0;
     }
     
@@ -237,6 +257,24 @@ namespace OpenFlow
             }
 
         }
+    }
+
+    void Controller::flowRemovedHandler(unsigned char *buf, ssize_t size)
+    {
+        OpenFlow::Messages::FlowRemovedDecoder decoder(buf);
+        uint32_t crc = decoder.getCookie();
+        m_table.removeFlowEntryByCRC(crc);
+
+        uint32_t durationNSec = decoder.getDurationNSec();
+        uint64_t packetCount = decoder.getPacketCount();
+        uint64_t byteCount = decoder.getByteCount();
+
+        std::cout << "Flow Expired: ID: " << crc
+                  << " Duration: " << durationNSec
+                  << " Packet Count: " << packetCount
+                  << " Byte Count: " << byteCount;
+
+        m_table.addFlowResults(crc, durationNSec, packetCount, byteCount);
     }
 
     Controller::SwitchFeatures::SwitchFeatures()

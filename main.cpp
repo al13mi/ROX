@@ -25,8 +25,26 @@ controller_read_cb(struct bufferevent *bev, void *ctx)
 {
     unsigned char buf[BUFFER_SIZE];
     struct evbuffer *input = bufferevent_get_input(bev);
-    ev_ssize_t len = evbuffer_remove(input, &buf, BUFFER_SIZE);
-    controller.rxPacket(buf, len);
+
+    ev_ssize_t len = BUFFER_SIZE;
+    do
+    {
+        uint32_t bytesInBuffer = evbuffer_copyout(input, &buf, len);
+        len = controller.getMessageLength(buf, len);
+
+        if(bytesInBuffer < len)
+        {
+            break;
+        }
+
+        len = controller.getMessageLength(buf, len);
+
+        if(len != 0)
+        {
+            len = evbuffer_remove(input, &buf, len);
+            controller.rxPacket(buf, len);
+        }
+    } while(len > 0 );
 }
 
 static void
@@ -50,7 +68,10 @@ accept_conn_cb(struct evconnlistener *listener,
     /* We got a new connection! Set up a bufferevent for it. */
     struct event_base *base = evconnlistener_get_base(listener);
     bev = bufferevent_socket_new(
-            base, fd, BEV_OPT_CLOSE_ON_FREE);
+
+            base, fd, BEV_OPT_CLOSE_ON_FREE );
+
+    //BEV_OPT_THREADSAFE
 
     bufferevent_setcb(bev, controller_read_cb, NULL, controller_event_cb, NULL);
     
