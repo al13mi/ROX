@@ -141,7 +141,6 @@ namespace OpenFlow {
 
     int Controller::rxPacket(uint8_t *buf, ssize_t size)
     {
-        std::lock_guard<std::mutex> guard(rxLock);
 
         memcpy(rxRingBuf[write].buf, buf, size);
         rxRingBuf[write].size = size;
@@ -247,8 +246,14 @@ namespace OpenFlow {
 
                 // Lookup the source Interface table (which means I need an interface table).
                 uint16_t len = m_table.addFlowEntryFromIndexV4(txBuf, &index, 2, 0x5200000000AA, mac);
+                if(len == 0)
+                {
+                    return;
+                }
+
                 encoder.setLength(len);
 
+                std::cout << "len: " << len << "\n";
                 txPacket(txBuf, len);
             }
             else if(htons(Network::ARP) == etherType)

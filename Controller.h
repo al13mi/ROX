@@ -47,7 +47,7 @@ namespace OpenFlow
         uint32_t version;
         uint32_t xid;
         Mbuf rxRingBuf[BUFFER_SIZE];
-        uint8_t txBuf[BUFFER_SIZE];
+        uint8_t txBuf[BUFFER_SIZE*4];
         uint32_t read = 0;
         uint32_t write = 0;
 

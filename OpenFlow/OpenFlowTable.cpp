@@ -382,7 +382,7 @@ namespace OpenFlow {
         auto search = m_flowTable.find(crc);
         if(search == m_flowTable.end())
         {
-            std::cout << "Adding Flow Id: " << crc << "\n";
+            //std::cout << "Adding Flow Id: " << crc << "\n";
 
             entry = std::unique_ptr<OpenFlow::OpenFlowTableEntry>(
                     new OpenFlow::OpenFlowTableEntry(crc, 0xFFFFFFFFFFFFFFFF, 0));
@@ -419,7 +419,7 @@ namespace OpenFlow {
                     std::unique_ptr <OpenFlow::OpenFlowMatchFields> src
                             = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(
                                     new OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, srcField, srcPort));
-                    match->insertField(std::move(src));
+                    //match->insertField(std::move(src));
 
                     std::unique_ptr <OpenFlow::OpenFlowMatchFields> dst
                             = std::unique_ptr<OpenFlow::OpenFlowMatchFields>(
@@ -455,8 +455,8 @@ namespace OpenFlow {
             match->insertField(std::move(ethTypeField));
 
 
-            entry->setIdleTimeout(10);
-            entry->setHardTimeout(20);
+            entry->setIdleTimeout(30);
+            entry->setHardTimeout(0);
             entry->setPriority(10000);
             entry->setBufferId(OFP_NO_BUFFER);
             entry->setOutGroup(OFPG_ANY);
@@ -489,7 +489,7 @@ namespace OpenFlow {
         }
         else
         {
-            len = search->second->buildPacketData(txBuf);
+            return 0;
         }
 
         return len;

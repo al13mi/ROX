@@ -37,8 +37,6 @@ controller_read_cb(struct bufferevent *bev, void *ctx)
             break;
         }
 
-        len = controller.getMessageLength(buf, len);
-
         if(len != 0)
         {
             len = evbuffer_remove(input, &buf, len);
@@ -95,10 +93,14 @@ accept_error_cb(struct evconnlistener *listener, void *ctx)
 
 void txPacket(unsigned char *buf, ssize_t size)
 {
-   struct evbuffer *output = bufferevent_get_output(bev);
-   evbuffer_add(output, buf, size);
-   bufferevent_flush(bev, EV_WRITE, BEV_FLUSH);
-   // evbuffer_write(bev, buf, output);
+    struct evbuffer *output = bufferevent_get_output(bev);
+    evbuffer_add(output, buf, size);
+    // TODO: We should really do some error handling here.  If we can't write for some reason
+    // TODO: Things might explode.
+
+    bufferevent_flush(bev, EV_WRITE, BEV_FLUSH);
+
+    //evbuffer_write(output, buf, output);
 }
 
 
