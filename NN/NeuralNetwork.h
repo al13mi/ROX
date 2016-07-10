@@ -19,8 +19,7 @@ namespace Python {
         uint32_t predict(const OpenFlow::FlowStats &stats);
 
     private:
-        PyObject *pName, *pModule, *pDict, *pFunc;
-        PyObject *pArgs, *pValue;
+        PyObject *pName, *pModule;
     };
 }
 #endif

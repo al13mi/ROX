@@ -13,7 +13,7 @@ namespace Python {
         if(pModule != NULL)
         {
             std::cout << "Attempting to initialize Python Interpreter\n";
-            pFunc = PyObject_GetAttrString(pModule, (char*)"test_initialization");
+            PyObject *pFunc = PyObject_GetAttrString(pModule, (char*)"test_initialization");
             if (pFunc && PyCallable_Check(pFunc)) {
                 PyObject_CallObject(pFunc, NULL);
             }
@@ -39,7 +39,7 @@ namespace Python {
 
     uint32_t TensorFlowRNN::learn(const OpenFlow::FlowStats &stats)
     {
-        pArgs = PyTuple_New(6);
+        PyObject *pArgs = PyTuple_New(6);
         PyTuple_SetItem(pArgs, 0, PyLong_FromUnsignedLong(stats.crc));
         PyTuple_SetItem(pArgs, 1, PyLong_FromUnsignedLong(stats.durationNSec));
         PyTuple_SetItem(pArgs, 2, PyLong_FromUnsignedLongLong(stats.packetCount));
@@ -58,7 +58,7 @@ namespace Python {
 
         PyTuple_SetItem(pArgs, 5, header);
 
-        pFunc = PyObject_GetAttrString(pModule, (char*)"learn");
+        PyObject *pFunc = PyObject_GetAttrString(pModule, (char*)"learn");
         if (pFunc && PyCallable_Check(pFunc)) {
             PyObject_CallObject(pFunc, pArgs);
         }
@@ -68,7 +68,7 @@ namespace Python {
 
     uint32_t TensorFlowRNN::predict(const OpenFlow::FlowStats &stats)
     {
-        pArgs = PyTuple_New(6);
+        PyObject *pArgs = PyTuple_New(6);
         PyTuple_SetItem(pArgs, 0, PyLong_FromUnsignedLong(stats.crc));
         PyTuple_SetItem(pArgs, 1, PyLong_FromUnsignedLong(stats.durationNSec));
         PyTuple_SetItem(pArgs, 2, PyLong_FromUnsignedLongLong(stats.packetCount));
@@ -87,7 +87,7 @@ namespace Python {
 
         PyTuple_SetItem(pArgs, 5, header);
 
-        pFunc = PyObject_GetAttrString(pModule, (char*)"learn");
+        PyObject *pFunc = PyObject_GetAttrString(pModule, (char*)"learn");
         if (pFunc && PyCallable_Check(pFunc)) {
             PyObject_CallObject(pFunc, pArgs);
         }
