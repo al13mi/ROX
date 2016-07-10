@@ -116,10 +116,11 @@ namespace OpenFlow {
         m_routeTable->insert(route2, 24, nextHop2);
 
         // Create an Arp Entry for the next hop.
+        // 192.168.1.254
         Network::IpAddressV4 address(3232236030);
         uint64_t mac = 0x520000000001;
         m_arpTable->insertArpEntry(mac, address);
-
+        // 192.168.2.254
         Network::IpAddressV4 address2(3232236286);
         uint64_t mac2 = 0x530000000001;
         m_arpTable->insertArpEntry(mac2, address2);

@@ -98,8 +98,8 @@ void txPacket(unsigned char *buf, ssize_t size)
     // TODO: We should really do some error handling here.  If we can't write for some reason
     // TODO: Things might explode.
 
-    bufferevent_flush(bev, EV_WRITE, BEV_FLUSH);
-
+    // bufferevent_flush(bev, EV_WRITE, BEV_FLUSH);
+    bufferevent_write(bev, buf, size);
     //evbuffer_write(output, buf, output);
 }
 
