@@ -92,12 +92,11 @@ accept_error_cb(struct evconnlistener *listener, void *ctx)
     event_base_loopexit(base, NULL);
 }
 
-
-int txPacket(unsigned char *buf, ssize_t size)
-{
+int txPacket(unsigned char *buf, ssize_t size) {
     evbuffer_add(output, buf, size);
     bufferevent_write(bev, buf, size);
 }
+
 
 #ifndef TESTMAIN
 int
