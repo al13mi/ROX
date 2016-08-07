@@ -19,6 +19,7 @@ using namespace std;
 OpenFlow::Controller controller;
 
 struct bufferevent *bev;
+struct evbuffer *output;
 
 static void
 controller_read_cb(struct bufferevent *bev, void *ctx)
@@ -72,7 +73,7 @@ accept_conn_cb(struct evconnlistener *listener,
     //BEV_OPT_THREADSAFE
 
     bufferevent_setcb(bev, controller_read_cb, NULL, controller_event_cb, NULL);
-    
+    output = evbuffer_new();
     bufferevent_enable(bev, EV_READ|EV_WRITE);
     controller.connectionHandler();
 
@@ -91,18 +92,12 @@ accept_error_cb(struct evconnlistener *listener, void *ctx)
     event_base_loopexit(base, NULL);
 }
 
-void txPacket(unsigned char *buf, ssize_t size)
+
+int txPacket(unsigned char *buf, ssize_t size)
 {
-    struct evbuffer *output = bufferevent_get_output(bev);
     evbuffer_add(output, buf, size);
-    // TODO: We should really do some error handling here.  If we can't write for some reason
-    // TODO: Things might explode.
-
-    // bufferevent_flush(bev, EV_WRITE, BEV_FLUSH);
     bufferevent_write(bev, buf, size);
-    //evbuffer_write(output, buf, output);
 }
-
 
 #ifndef TESTMAIN
 int

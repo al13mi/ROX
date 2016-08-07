@@ -62,12 +62,12 @@ namespace Python {
         if (pFunc && PyCallable_Check(pFunc)) {
             PyObject_CallObject(pFunc, pArgs);
         }
-
         return 0;
     }
 
     uint32_t TensorFlowRNN::predict(const OpenFlow::FlowStats &stats)
     {
+
         PyObject *pArgs = PyTuple_New(6);
         PyTuple_SetItem(pArgs, 0, PyLong_FromUnsignedLong(stats.crc));
         PyTuple_SetItem(pArgs, 1, PyLong_FromUnsignedLong(stats.durationNSec));

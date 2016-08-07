@@ -33,7 +33,7 @@
 
 using namespace std;
 
-extern void txPacket(unsigned char *buf, ssize_t size);
+extern int txPacket(unsigned char *buf, ssize_t size);
 
 namespace OpenFlow {
     void Controller::ControllerThread() {
@@ -254,8 +254,9 @@ namespace OpenFlow {
 
                 encoder.setLength(len);
 
-                std::cout << "len: " << len << "\n";
+                // std::cout << "len: " << len << "\n";
                 txPacket(txBuf, len);
+                // txPacket(txBuf, len);
             }
             else if(htons(Network::ARP) == etherType)
             {
