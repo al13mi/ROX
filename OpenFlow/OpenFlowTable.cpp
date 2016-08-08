@@ -506,9 +506,9 @@ namespace OpenFlow {
             m_flowTable.insert(std::make_pair(crc, std::move(entry)));
 
         }
-        // else
+        else
         {
-            //return 0;
+            return 0;
         }
 
         return len;

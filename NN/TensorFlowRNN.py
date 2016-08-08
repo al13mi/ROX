@@ -32,20 +32,20 @@ def learn(crc, durationNSec, packetCount, byteCount, timestamp, header):
     ds.addSample(header, packetCount)
     #rnn.activate(header)
     trainer = BackpropTrainer(rnn, ds)
-    error = trainer.train()
+    trainer.train()
 
-    f = open("result.txt", "a")
-    f.write("EXPIRE: FLOWID:{:d} PACKETCOUNT:{:d}\n".format(crc, packetCount))
-    f.close()
-    print packetCount
+    #f = open("result.txt", "a")
+    #f.write("EXPIRE: FLOWID:{:d} PACKETCOUNT:{:d}\n".format(crc, packetCount))
+    #f.close()
+    #print packetCount
     #print rnn.activate(header)
-    print "Error: " + str(error)
+    #print "Error: " + str(error)
 
 def predict(crc, header):
 
     result = rnn.activate(header)[0]
     f = open("result.txt", "a")
-    print result
+    #print result
     f.write("INSERT: FLOWID:{:d} PRIORITY:{:f}\n".format(crc, result))
     f.close()
     return result
