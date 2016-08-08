@@ -295,6 +295,7 @@ namespace OpenFlow {
         encoder.setOutGroup(m_outGroup);
         encoder.setFlags(m_flags);
         encoder.setOutPort(m_outPort);
+        encoder.setImportance(m_importance);
 
         std::list<std::unique_ptr<OpenFlowMatch>>::iterator it;
         uint8_t* endPtr = encoder.getMatchFieldWritePtr();
@@ -382,7 +383,7 @@ namespace OpenFlow {
         auto search = m_flowTable.find(crc);
         if(search == m_flowTable.end())
         {
-            //std::cout << "Adding Flow Id: " << crc << "\n";
+            // std::cout << "Adding Flow Id: " << crc << "\n";
 
             entry = std::unique_ptr<OpenFlow::OpenFlowTableEntry>(
                     new OpenFlow::OpenFlowTableEntry(crc, 0xFFFFFFFFFFFFFFFF, 0));
@@ -464,8 +465,6 @@ namespace OpenFlow {
             flowStatsCopy->index = *index;
 
 
-            nn.predict(*flowStatsCopy);
-
             entry->setIdleTimeout(3);
             entry->setHardTimeout(3);
             entry->setPriority(10000);
@@ -473,6 +472,15 @@ namespace OpenFlow {
             entry->setOutGroup(OFPG_ANY);
             entry->setFlags(1);
             entry->setOutPort(port);
+            uint32_t importance = nn.predict(*flowStatsCopy);
+            if(importance <= 0){
+                entry->setImportance(1);
+            }
+            else
+            {
+                entry->setImportance(importance);
+            }
+
 
             std::unique_ptr <OpenFlow::OpenFlowActionOutput> outputAction
                     = std::unique_ptr<OpenFlow::OpenFlowActionOutput>(new OpenFlow::OpenFlowActionOutput(port));
@@ -498,9 +506,9 @@ namespace OpenFlow {
             m_flowTable.insert(std::make_pair(crc, std::move(entry)));
 
         }
-        else
+        // else
         {
-            return 0;
+            //return 0;
         }
 
         return len;

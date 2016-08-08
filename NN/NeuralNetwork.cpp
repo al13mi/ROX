@@ -126,7 +126,7 @@ namespace Python {
         unsigned long result = 0;
         if (pFunc && PyCallable_Check(pFunc)) {
             pResult = PyObject_CallObject(pFunc, pArgs);
-            //result = PyInt_AsUnsignedLongMask(pResult);
+            result = PyInt_AsUnsignedLongMask(pResult);
         }
         else
         {
