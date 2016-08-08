@@ -73,7 +73,7 @@ accept_conn_cb(struct evconnlistener *listener,
     //BEV_OPT_THREADSAFE
 
     bufferevent_setcb(bev, controller_read_cb, NULL, controller_event_cb, NULL);
-    output = evbuffer_new();
+
     bufferevent_enable(bev, EV_READ|EV_WRITE);
     controller.connectionHandler();
 
@@ -99,6 +99,7 @@ int txPacket(unsigned char *buf, ssize_t size)
         return -1;
     }
     bufferevent_flush(bev, EV_WRITE, BEV_FLUSH);
+    return 0;
 }
 
 
@@ -106,6 +107,7 @@ int txPacket(unsigned char *buf, ssize_t size)
 int
 main(int argc, char **argv)
 {
+    output = evbuffer_new();
     struct event_base *base;
     struct evconnlistener *listener;
     struct sockaddr_in sin;

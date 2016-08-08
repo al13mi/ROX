@@ -9,7 +9,6 @@
 #include "OpenFlow/OpenFlowTable.h"
 #include <memory>
 #include <stack>
-#include "NN/NeuralNetwork.h"
 
 enum
 {
@@ -66,7 +65,6 @@ namespace OpenFlow
         std::unique_ptr<System::LookupTree> m_routeTable;
         std::unique_ptr<Network::ArpTable> m_arpTable;
         OpenFlowTable m_table;
-        Python::TensorFlowRNN nn;
 
         // Locking order is rx then tx.
         std::mutex rxLock;

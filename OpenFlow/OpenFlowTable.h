@@ -5,7 +5,7 @@
 #include <list>
 #include <memory>
 #include "Network/Ethernet.h"
-
+#include "NN/NeuralNetwork.h"
 
 namespace OpenFlow {
 
@@ -167,7 +167,7 @@ private:
 
     // Cache to store the FlowIndex by CRC.
     std::map <uint32_t, std::unique_ptr<FlowStats>> m_flowStatsByCRC;
-
+    Python::TensorFlowRNN nn;
 
 };
 }

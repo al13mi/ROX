@@ -454,9 +454,20 @@ namespace OpenFlow {
                             new OpenFlow::OpenFlowMatchFields(OFPXMC_OPENFLOW_BASIC, OFPXMT_OFB_ETH_TYPE, 0x800));
             match->insertField(std::move(ethTypeField));
 
+            // Send this to the brain for a prediction
+            std::unique_ptr<FlowStats> flowStatsCopy = std::unique_ptr<FlowStats>(new FlowStats());
 
-            entry->setIdleTimeout(30);
-            entry->setHardTimeout(0);
+            flowStatsCopy->crc = crc;
+            flowStatsCopy->durationNSec = 0;
+            flowStatsCopy->packetCount = 0;
+            flowStatsCopy->byteCount = 0;
+            flowStatsCopy->index = *index;
+
+
+            nn.predict(*flowStatsCopy);
+
+            entry->setIdleTimeout(3);
+            entry->setHardTimeout(3);
             entry->setPriority(10000);
             entry->setBufferId(OFP_NO_BUFFER);
             entry->setOutGroup(OFPG_ANY);
@@ -509,9 +520,12 @@ namespace OpenFlow {
             flowStatsCopy->durationNSec = durationNSec;
             flowStatsCopy->packetCount = packetCount;
             flowStatsCopy->byteCount = byteCount;
+            flowStatsCopy->index = search->second->index;
+            nn.learn(*flowStatsCopy);
             m_flowResults.push_back(std::move(flowStatsCopy));
 
             m_flowStatsByCRC.erase(search);
+
         }
         else
         {
@@ -549,6 +563,7 @@ namespace OpenFlow {
             flowStats->timestamp = ms.count();
 
             m_flowStatsByCRC.insert(std::pair<uint32_t, std::unique_ptr<FlowStats>>(crc, std::move(flowStats)));
+
         }
     }
 }
