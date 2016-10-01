@@ -1,15 +1,26 @@
-import pybrain
-from pybrain.supervised.trainers import BackpropTrainer
-from pybrain.datasets import SupervisedDataSet
-from pybrain.tools.shortcuts import buildNetwork
-from pybrain.structure.modules import LSTMLayer, SoftmaxLayer
+def test_initialization():
+    pass
 
-import threading
+def learn(crc, durationNSec, packetCount, byteCount, timestamp, header):
+    pass
+
+def predict(crc, header):
+    return 15
+
+print "foo"
+import pybrain
+print "bar"
+#from pybrain.supervised.trainers import BackpropTrainer
+#from pybrain.datasets import SupervisedDataSet
+#from pybrain.tools.shortcuts import buildNetwork
+#from pybrain.structure.modules import LSTMLayer, SoftmaxLayer
 
 import collections
+"""
 rnn = None
 samples = None
 ds = None
+
 def initialize_network():
     global rnn
     global samples
@@ -20,11 +31,10 @@ def initialize_network():
 
 def test_initialization():
     print "Loading TensorFlow RNN"
-    initialize_network()
+    # initialize_network()
 
 def learn(crc, durationNSec, packetCount, byteCount, timestamp, header):
     # add the sample to the queue
-
     global samples
     samples.append((header, (packetCount)))
     ds = SupervisedDataSet(6, 1)
@@ -42,14 +52,13 @@ def learn(crc, durationNSec, packetCount, byteCount, timestamp, header):
     #print "Error: " + str(error)
 
 def predict(crc, header):
-
     result = rnn.activate(header)[0]
     f = open("result.txt", "a")
     #print result
     f.write("INSERT: FLOWID:{:d} PRIORITY:{:f}\n".format(crc, result))
     f.close()
     return result
-
+"""
 
 
 

@@ -6,6 +6,15 @@
 #include <mutex>
 #include <thread>
 #include <list>
+
+#include <capnp/message.h>
+#include <capnp/serialize-packed.h>
+#include "brain.capnp.h"
+#include <iostream>
+#include <capnp/ez-rpc.h>
+
+using ::Brain;
+
 namespace OpenFlow
 {
     struct FlowStats;
@@ -27,7 +36,6 @@ namespace Python {
         std::list<std::unique_ptr<OpenFlow::FlowStats>> statsList;
         std::mutex nnLock;
         std::thread T;
-
     };
 }
 #endif
