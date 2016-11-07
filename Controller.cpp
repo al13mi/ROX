@@ -37,9 +37,9 @@ extern int txPacket(unsigned char *buf, ssize_t size);
 
 namespace OpenFlow {
     void Controller::ControllerThread() {
-        while (true)
+        // while (true)
         {
-            rxHandler();
+            // rxHandler();
         }
     }
 
@@ -146,7 +146,7 @@ namespace OpenFlow {
         memcpy(rxRingBuf[write].buf, buf, size);
         rxRingBuf[write].size = size;
         write = (write + 1) % BUFFER_SIZE;
-
+        rxHandler();
         return 0;
     }
     

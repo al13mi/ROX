@@ -2,7 +2,7 @@
 
 interface Brain {
   predict @0 (packet: Packet) -> (priority: Priority);
-  learn @1 (packet: Packet, priority: Priority);
+  learn @1 (packet: Packet, priority: ActualPriority);
 
   struct Packet {
     data @0 : List(Entry);
@@ -13,10 +13,10 @@ interface Brain {
   }
 
   struct ActualPriority {
-    value @0 : UInt16;
+    value @0 : UInt32;
   }
 
   interface Priority {
-        read @0 () ->(value :UInt16);
+        read @0 () ->(value :UInt32);
   }
 }

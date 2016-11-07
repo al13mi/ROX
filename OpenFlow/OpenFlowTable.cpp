@@ -367,7 +367,7 @@ namespace OpenFlow {
         }
     }
 
-    uint16_t OpenFlowTable::addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowIndexV4 *index, uint16_t port, uint64_t srcMac, uint64_t dstMac)
+uint16_t OpenFlowTable::addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowIndexV4 *index, uint16_t port, uint64_t srcMac, uint64_t dstMac)
     {
         uint16_t len  = 0;
 
@@ -463,8 +463,7 @@ namespace OpenFlow {
             flowStatsCopy->packetCount = 0;
             flowStatsCopy->byteCount = 0;
             flowStatsCopy->index = *index;
-
-
+            
             entry->setIdleTimeout(3);
             entry->setHardTimeout(3);
             entry->setPriority(10000);
@@ -571,7 +570,6 @@ namespace OpenFlow {
             flowStats->timestamp = ms.count();
 
             m_flowStatsByCRC.insert(std::pair<uint32_t, std::unique_ptr<FlowStats>>(crc, std::move(flowStats)));
-
         }
     }
 }

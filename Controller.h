@@ -13,7 +13,7 @@
 enum
 {
     LISTEN_PORT = 6653,
-    BUFFER_SIZE = 2640,
+    BUFFER_SIZE = 26400,
 };
 
 struct Mbuf

@@ -19,23 +19,26 @@ namespace Python {
             }
 
             std::list <std::unique_ptr<OpenFlow::FlowStats>>::iterator it;
+            auto &waitScope = client.getWaitScope();
             for(it = statsListCopy.begin(); it != statsListCopy.end(); it++)
             {
-                auto& waitScope = client.getWaitScope();
+                std::lock_guard <std::mutex> guard(nnLock);
+                auto request = brain.learnRequest();
+                auto requestPacket = request.initPacket();
+                ::capnp::List<Brain::Entry>::Builder packet = requestPacket.initData(Network::FlowIndexV4::BYTE_KEY_SIZE);
+                
+                for(int n = 0; n<Network::FlowIndexV4::BYTE_KEY_SIZE; n++)
                 {
-                    std::cout << "Asking Python Brain something remotely\n";
-                    std::cout.flush();
-                    auto request = brain.predictRequest();
-                    auto requestPacket = request.initPacket();
-                    ::capnp::List<Brain::Entry>::Builder packet = requestPacket.initData(1);
-                    Brain::Entry::Builder entry = packet[0];
-                    entry.setValue(128);
-
-                    auto evalPromise = request.send();
-                    auto readPromise = evalPromise.getPriority().readRequest().send();
-                    auto response = readPromise.wait(waitScope);
-                    std::cout << response.getValue() << "\n";
+                    Brain::Entry::Builder entry = packet[n];
+                    uint8_t word = (*it)->index.contents.byteKey[n];
+                    entry.setValue(word);
                 }
+
+                auto priority = request.initPriority();
+                uint32_t packetCount = (*it)->packetCount;
+                priority.setValue(packetCount);
+                auto promise = request.send();
+                auto response = promise.wait(waitScope);
             }
 
             sleep(1);
@@ -44,7 +47,6 @@ namespace Python {
 
     TensorFlowRNN::TensorFlowRNN()
     {
-
         std::thread thr(&TensorFlowRNN::worker, this);
         std::swap(thr, T);
 
@@ -69,6 +71,30 @@ namespace Python {
 
     uint32_t TensorFlowRNN::predict(const OpenFlow::FlowStats &stats)
     {
-        return 0;
+        std::lock_guard <std::mutex> guard(nnLock);
+        capnp::EzRpcClient client("127.0.0.1:3333");
+        Brain::Client brain(client.getMain<Brain>());
+
+        auto& waitScope = client.getWaitScope();
+        {
+            std::cout.flush();
+            auto request = brain.predictRequest();
+            auto requestPacket = request.initPacket();
+
+            ::capnp::List<Brain::Entry>::Builder packet = requestPacket.initData(Network::FlowIndexV4::BYTE_KEY_SIZE);
+            for(int n = 0; n<Network::FlowIndexV4::BYTE_KEY_SIZE; n++)
+            {
+                Brain::Entry::Builder entry = packet[n];
+                uint8_t word = stats.index.contents.byteKey[n];
+                entry.setValue(word);
+            }
+            
+            auto evalPromise = request.send();
+            auto readPromise = evalPromise.getPriority().readRequest().send();
+            auto response = readPromise.wait(waitScope);
+            std::cout << response.getValue() << "\n";
+            return response.getValue();
+        }
+        
     }
 }
