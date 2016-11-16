@@ -6,17 +6,10 @@ import capnp
 import brain_capnp
 import time
 
-from pylearn2.models import mlp
-from pylearn2.training_algorithms import bgd, sgd
-from pylearn2.termination_criteria import EpochCounter
-from pylearn2.datasets.dense_design_matrix import DenseDesignMatrix
 import numpy as np
-import theano
 
-class Samples(DenseDesignMatrix):
-    def __init__(self, X, y):
-        self.class_names = ['Input', 'Output']
-        super(Samples, self).__init__(X=np.array(X),y=np.array(y))
+from keras.models import Sequential
+from keras.layers import Dense, LSTM
 
 class PriorityImpl(brain_capnp.Brain.Priority.Server):
         def __init__(self, value):
@@ -27,28 +20,30 @@ class PriorityImpl(brain_capnp.Brain.Priority.Server):
 
 class BrainImpl(brain_capnp.Brain.Server):
     def __init__(self):
-        hidden_layer = mlp.Sigmoid(layer_name='hidden', dim=64, irange=.1, init_bias=1.)
         self.size = 10
         self.max = 100000.
-        output_layer = mlp.Softmax(self.size, 'output', irange=.1)
-        #self.trainer = bgd.BGD(batch_size=32)
-        self.trainer = sgd.SGD(learning_rate=.01, batch_size=32, termination_criterion=EpochCounter(400))
-        layers = [hidden_layer, output_layer]
-        self.ann = mlp.MLP(layers, nvis=16)
+
+        self.model = Sequential()
+        self.model.add(Dense(32, input_dim=16, init='uniform', activation='relu'))
+        self.model.add(Dense(16, init='uniform', activation='relu'))
+        #self.model.add(LSTM(32, input_dim=16, dropout_W=0.2, dropout_U=0.2))
+        #self.model.add(LSTM(32, dropout_W=0.2, dropout_U=0.2))
+        self.model.add(Dense(10, init='uniform', activation='sigmoid'))
+        self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
         self.example = []
         self.expected = []
         
     def predict(self, packet, _context, **kwargs):
         print "predict:"
         sample = [int(x.value) for x in packet.data]
+        sample = np.array(sample)
         print sample
         input = np.array([sample])
-        result = self.ann.fprop(theano.shared(input, name='inputs')).eval()
+        print input.shape
+        result = self.model.predict(input)
         r = result[0]
         print r
-        #m = max(r)
-        #r = [i for i,j in enumerate(r) if j==m]
-        #print "One Hot: " + str(r)
         i = np.argmax(r)
         r = i/float(len(r))*10000
         print r
@@ -65,29 +60,22 @@ class BrainImpl(brain_capnp.Brain.Server):
             p = p - 1
         p = int(p)
         l[p] = 1
-        p = l
+        p = np.array(l)
         print p
         sample = [int(x.value) for x in packet.data]
+        sample = np.array(sample)
         #print sample
         #print p
         #print packet
         self.example.append(sample)
         self.expected.append(p)
         print len(self.example)
-        if len(self.example) >= 32:
-            ds = Samples([sample], [p])
-            self.trainer.setup(self.ann, ds)
-            epoch = 1
-            #while True:
-                #self.trainer.setup(self.ann, ds)
-                #for x in range(0,10):
-            self.trainer.train(dataset=ds)
-            self.ann.monitor.report_epoch()
-            self.ann.monitor()
-            #if not self.trainer.continue_learning(self.ann):
-            #    break
-            #self.example = []
-            #self.expected = []
+        if len(self.example) >= 100:
+            self.model.fit(np.array(self.example), np.array(self.expected), nb_epoch=5, batch_size=25)
+            scores = self.model.evaluate(np.array(self.example), np.array(self.expected))
+            print("%s: %.2f%%" % (self.model.metrics_names[1], scores[1]*100))
+            self.expected = []
+            self.example = []
         
         
 def main():
