@@ -41,7 +41,6 @@ namespace Python {
                 auto response = promise.wait(waitScope);
             }
 
-            sleep(1);
         }
     }
 
