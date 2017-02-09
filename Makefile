@@ -28,10 +28,6 @@ CXX=g++
 .PHONY: all
 all: $(MAIN)
 
-.PHONY: upload
-upload:
-	$(RSYNC)
-
 $(MAIN): $(OBJS)
 	$(CXX) -o $(MAIN) $(OBJS) $(LDFLAGS) $(CFLAGS)
 
