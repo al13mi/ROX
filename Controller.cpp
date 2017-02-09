@@ -202,7 +202,7 @@ namespace OpenFlow {
         encoder.setXid(xid++);
         encoder.setVersion(version);
 
-        uint32_t pad = 8 - len%8;
+        //uint32_t pad = 8 - len%8;
 
         encoder.setLength(len);
         txPacket(txBuf, len);
