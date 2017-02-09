@@ -20,7 +20,7 @@ OBJS += NN/brain.capnp.o
 
 
 MAIN=controller
-CFLAGS=-pthread -I. -g -msse4.2 -std=gnu++11 -Wall -Werror
+CFLAGS=-pthread -I. -g -msse4.2 -std=gnu++11 -Wall -Werror -pedantic
 LDFLAGS= -g -levent -std=gnu++11 -lcapnp -lcapnp-rpc -lkj -lkj-async
 CXX=g++
 #CXX=clang++-3.8
