@@ -17,13 +17,13 @@ openvswitch
 CMake .                  Generates the makefiles
 make                     Builds the application
 
-adtran@debian:~/ROX$ cmake .
+foo@debian:~/ROX$ cmake .
 -- Found libevent2 includes:	/usr/include/event2/event.h
 -- Found libevent2 library: /usr/lib/x86_64-linux-gnu/libevent.so
 -- Configuring done
 -- Generating done
 -- Build files have been written to: /home/adtran/ROX
-adtran@debian:~/ROX$ make
+foo@debian:~/ROX$ make
 Scanning dependencies of target Controller
 [  2%] Building CXX object CMakeFiles/Controller.dir/Controller.cpp.o
 [  5%] Linking CXX static library libController.a
