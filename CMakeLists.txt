@@ -3,12 +3,17 @@ project (ROX)
 
 set (ROX_VERSION_MAJOR 1)
 set (ROX_VERSION_MINOR 0)
-
+set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set (CMAKE_CXX_FLAGS "-pthread -I. -g -msse4.2 -std=gnu++11 -Wall -Werror -pedantic -fsanitize=address -fsanitize=leak -fsanitize=undefined")
 set (CMAKE_EXE_LINKER_FLAGS "-g -levent -std=gnu++11 -lcapnp -lcapnp-rpc -lkj -lkj-async -pedantic -fsanitize=address -fsanitize=leak -fsanitize=undefined")
 
 include_directories("${PROJECT_BINARY_DIR}")
 
+find_package(libevent REQUIRED)
+find_package(CapnProto REQUIRED)
+
+execute_process(COMMAND capnp compile -oc++ NN/brain.capnp)
+execute_process(COMMAND mv NN/brain.capnp.c++ NN/brain.capnp.cpp)
 add_executable (ROX main.cpp)
 add_subdirectory (OpenFlow)
 add_subdirectory (NN)
