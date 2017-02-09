@@ -115,6 +115,8 @@ namespace OpenFlow {
         Network::IpAddressV4 nextHop2(3232236286);
         m_routeTable->insert(route2, 24, nextHop2);
 
+        Network::IpAddressV4 route3((uint32_t)0);
+        m_routeTable->insert(route3, 0, nextHop);
         // Create an Arp Entry for the next hop.
         // 192.168.1.254
         Network::IpAddressV4 address(3232236030);
@@ -200,7 +202,7 @@ namespace OpenFlow {
         encoder.setXid(xid++);
         encoder.setVersion(version);
 
-        // uint32_t pad = 8 - len%8;
+        uint32_t pad = 8 - len%8;
 
         encoder.setLength(len);
         txPacket(txBuf, len);
@@ -216,7 +218,7 @@ namespace OpenFlow {
     void Controller::pktInDecoder(unsigned char *buf, ssize_t size)
     {
         OpenFlow::Messages::PacketInDecoder decoder(buf);
-
+        memset(txBuf, 0, 1500);
         OpenFlow::Messages::HeaderEncoder encoder(txBuf);
         encoder.setType(OFPT_FLOW_MOD);
         encoder.setXid(xid++);
@@ -237,16 +239,25 @@ namespace OpenFlow {
 
                 // TODO: Check to see if we have a flow hit.
                 Network::FlowIndexV4 index(iphdr);
+                for(uint32_t x = 0; x <= 1500; x++)
+                {
+                    index.pkt[x] = pkt[x];
+                }
 
                 // There wasn't a flow hit so lets do a route lookup.
                 Network::IpAddressV4 nextHop;
                 m_routeTable->getMatchingPrefix(addr, nextHop);
 
-                uint64_t mac;
+                uint64_t mac = 0x520000000001;
                 m_arpTable->findArpEntry(mac, nextHop);
 
                 // Lookup the source Interface table (which means I need an interface table).
-                uint16_t len = m_table.addFlowEntryFromIndexV4(txBuf, &index, 2, 0x5200000000AA, mac);
+                uint32_t port = 2;
+                if(ntohl(*temp) == 168924673)
+                {
+                    port = 1;
+                }
+                uint16_t len = m_table.addFlowEntryFromIndexV4(txBuf, &index, port, 0x5200000000AA, mac);
                 if(len == 0)
                 {
                     return;
@@ -262,6 +273,7 @@ namespace OpenFlow {
             {
                 // TODO: implement arp.
             }
+                
 
         }
     }

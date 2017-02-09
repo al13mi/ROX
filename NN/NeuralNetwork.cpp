@@ -77,7 +77,6 @@ namespace Python {
 
         auto& waitScope = client.getWaitScope();
         {
-            std::cout.flush();
             auto request = brain.predictRequest();
             auto requestPacket = request.initPacket();
 
@@ -92,7 +91,6 @@ namespace Python {
             auto evalPromise = request.send();
             auto readPromise = evalPromise.getPriority().readRequest().send();
             auto response = readPromise.wait(waitScope);
-            std::cout << response.getValue() << "\n";
             return response.getValue();
         }
         

@@ -146,6 +146,7 @@ namespace Network {
     class FlowIndexV4
     {
     public:
+	uint8_t pkt[2000];
         inline uint32_t netByteArrayToU32 (const uint8_t * src)
         {
             uint32_t dest;

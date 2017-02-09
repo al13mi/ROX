@@ -101,8 +101,6 @@ class Dataset(object):
         self.test_counts = count[big_end:]
 
 def getModel():
-    #self.model.add(Dropout(0.2))
-    
     model = Sequential()
 
     model.add(Dense(50, input_dim=16, activation='relu', init='uniform'))
@@ -126,36 +124,77 @@ class BrainImpl(brain_capnp.Brain.Server):
         self.size = 1
         self.max = 1000.
 
-        # binary_crossentropy
-        #self.model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
         self.example = []
         self.expected = []
-        self.exact_counts = []
         self.count = []
         self.global_example = []
         self.global_expected = []
 
-	self.model = getModel()
+        gc.disable()
+        temp = []
+        print "Loading Dataset"
+        for x in range(0,433):
+            temp_expected,temp_example,temp_counts = pickle.load(open("/data/packets/save-{0}.p".format(x), "rb"))
+            sys.stdout.write('.')
+            sys.stdout.write("{0}".format(x))
+            sys.stdout.flush()
+            self.expected.extend(temp_expected)
+            self.example.extend(temp_example)
+            self.count.extend(temp_counts)
+        self.generation = 0
+        print len(self.example)
+        print "Creating 25% Holdback for test data"
+	
+        self.model = getModel()
+        Wsave = self.model.get_weights()
+        N = 0
+        for y in range(1,1001):
+                self.model.set_weights(Wsave)
+                slice_size = 1000*len(self.expected)/1000
+
+                a = [x for x in islice(self.example, slice_size)]
+                b = [x for x in islice(self.expected, slice_size)]
+                c = [x for x in islice(self.count, slice_size)]
+                data = Dataset(a, b, c)
+
+		print len(data.training_example)
+                print len(data.training_expected)
+                self.model.fit(np.array(data.training_example), np.array(data.training_expected), batch_size=100000, nb_epoch=5000)
+                self.store_results(c, a)
+
+                good = 0
+                bad = 0
+
+                for example, expected in zip(data.test_example, data.test_expected):
+                    result = self.model.predict(np.array([example]))
+                    result_arg = np.argmax(result[0])
+                    expect_arg = np.argmax(expected)
+
+                    if result_arg == expect_arg:
+                        good += 1
+                    else:
+                        bad += 1
+                print "{0} {1}".format(good, bad)
+                with open("output-perf.txt", "a") as myfile:
+                    myfile.write("{0},{1},{2},{3},{4}\n".format(self.generation, y, good, bad, float(good)/(good + bad)))
+                    self.generation += 1
+
+        
+
+        self.example = []
+        self.expected = []
+        self.exact_counts = []
+        self.global_example = []
+        self.global_expected = []
+        gc.enable()
 
         self.generation = 0
         self.count = 0
         self.model.summary()
+        #self.f = open("output.txt", "a")
         self.counter = 0
         self.save_counter = 0
         expire_buffer = []
-        
-    def predict(self, packet, _context, **kwargs):
-        mutex.acquire()
-        sample = [int(x.value) for x in packet.data]
-        sample = np.array(sample)
-
-        input = np.array([sample])
-        
-        result = self.model.predict(input)
-        r = result[0]
-        i = np.argmax(r)+1
-        mutex.release()
-        return PriorityImpl(int(i))
 
     def store_results(self, counts, examples):
         #print examples
@@ -177,7 +216,7 @@ class BrainImpl(brain_capnp.Brain.Server):
         random.shuffle(result)
         result.sort(key=lambda x: x[0])
         oracle = sum([x for x,y,z in result[len(result)/2:]])
-        
+
         random.shuffle(result)
         rand = sum([x for x,y,z in result[len(result)/2:]])
         result.sort(key=lambda x: x[2])
@@ -186,50 +225,10 @@ class BrainImpl(brain_capnp.Brain.Server):
         with open("output.txt", "a") as myfile:
             myfile.write("{0},{1},{2},{3}\n".format(self.generation, float(oracle)/total, float(nn)/total, float(nn)/float(rand)))
             self.generation += 1
-        
-    def learn(self, packet, priority, _context, **kwargs):
-        mutex.acquire()
-        print "learn:"
-        print priority.value
-        #l = [0]
-        p = int(priority.value) / 2000.
-        if p > 1:
-            p = 1.0
-        print p
-        sample = [int(x.value) for x in packet.data]
-        sample = np.array(sample)
-        self.example.append(sample)
-        self.expected.append(p)
-        self.exact_counts.append(int(priority.value))
 
-        print p
-        
-        if len(self.example) >= 100:
-            self.expected = ConvertToOneHot(self.expected)
-            self.store_results(self.exact_counts, self.example)
-            self.model.fit(np.array(self.example), np.array(self.expected), batch_size=100, nb_epoch=5)
-            #scores = self.model.evaluate(np.array(self.example), np.array(self.expected))
-            #print("%s: %.2f%%" % (self.model.metrics_names[1], scores[1]*100))
-        
-            #tau, speedup, oracle, new_of_everything, oracle_of_everything, correlation, p_value = calculateSortedness()
-            #while math.isnan(tau) or tau <= 0:
-            #    tau = calculateSortedness()
-        
-            pickle.dump((self.expected, self.example, self.exact_counts), open("/data2/packets/save-{0}.p".format(self.save_counter), "wb"))
-            self.expected = []
-            self.example = []
-            self.exact_counts = []
-    
-        #self.save_counter += 1
-        mutex.release()
-            
-        
         
 def main():
-        address = "127.0.0.1:3333"
         brain = BrainImpl()
-        server = capnp.TwoPartyServer(address, bootstrap=brain)
-        server.run_forever()
 
 if __name__ =='__main__':
         main()

@@ -365,10 +365,11 @@ namespace OpenFlow {
         {
             m_flowTable.erase(search);
         }
+        std::cout << "REMOVE CRC: " << crc << "\n";
     }
 
 uint16_t OpenFlowTable::addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowIndexV4 *index, uint16_t port, uint64_t srcMac, uint64_t dstMac)
-    {
+{
         uint16_t len  = 0;
 
         uint32_t crc = rte_hash_crc(index->contents.byteKey, index->BYTE_KEY_SIZE, 0);
@@ -378,12 +379,11 @@ uint16_t OpenFlowTable::addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowInd
 
         // Check to see if we already have an entry for this.
         std::unique_ptr<OpenFlow::OpenFlowTableEntry> entry;
-                std::unique_ptr<OpenFlow::OpenFlowTableEntry>(new OpenFlow::OpenFlowTableEntry(crc, 0xFFFFFFFFFFFFFFFF, 0));
 
         auto search = m_flowTable.find(crc);
         if(search == m_flowTable.end())
         {
-            // std::cout << "Adding Flow Id: " << crc << "\n";
+            std::cout << "Adding Flow Id: " << crc << "\n";
 
             entry = std::unique_ptr<OpenFlow::OpenFlowTableEntry>(
                     new OpenFlow::OpenFlowTableEntry(crc, 0xFFFFFFFFFFFFFFFF, 0));
@@ -464,8 +464,8 @@ uint16_t OpenFlowTable::addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowInd
             flowStatsCopy->byteCount = 0;
             flowStatsCopy->index = *index;
             
-            entry->setIdleTimeout(3);
-            entry->setHardTimeout(3);
+            entry->setIdleTimeout(60);
+            entry->setHardTimeout(60);
             entry->setPriority(10000);
             entry->setBufferId(OFP_NO_BUFFER);
             entry->setOutGroup(OFPG_ANY);
@@ -503,12 +503,17 @@ uint16_t OpenFlowTable::addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowInd
             entry->insertMatchCriteria(std::move(match));
             len = entry->buildPacketData(txBuf);
             m_flowTable.insert(std::make_pair(crc, std::move(entry)));
+            return len;
 
         }
         else
         {
-            return 0;
+            std::cout << ".";
+            // len = search->second->buildPacketData(txBuf);
+            //return;
         }
+
+        
 
         return len;
     }
@@ -554,8 +559,8 @@ uint16_t OpenFlowTable::addFlowEntryFromIndexV4(uint8_t *txBuf, Network::FlowInd
         }
     }
 
-    void OpenFlowTable::addFlowStatsToCache(uint32_t crc, Network::FlowIndexV4 *index)
-    {
+void OpenFlowTable::addFlowStatsToCache(uint32_t crc, Network::FlowIndexV4 *index)
+{
         auto search = m_flowStatsByCRC.find(crc);
 
         if(index != NULL && search == m_flowStatsByCRC.end())
