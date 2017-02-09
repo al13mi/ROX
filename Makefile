@@ -38,9 +38,6 @@ $(MAIN): $(OBJS)
 %.o: %.cpp
 	$(CXX) -o $@ -c $< $(CFLAGS)
 
-t_%.o: %.cpp
-	$(CXX) -o $@ -c $< $(CFLAGS) -DTESTMAIN
-
 .PHONY: clean
 clean:
 	rm -f $(MAIN) $(LIB) $(OBJS) $(MAIN)_test t_$(OBJS)
