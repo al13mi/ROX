@@ -6,16 +6,16 @@ Building
 This project uses CMake to generate the makefile.  You must have cmake installed.
 
 ### Pre-requisites
-libevent2
-capnproto
-CMake
-g++
-Python2.7
-openvswitch
+libevent2  
+capnproto  
+CMake  
+g++  
+Python2.7  
+openvswitch  
 
 ### Build Command
-CMake .                  Generates the makefiles
-make                     Builds the application
+CMake .                  Generates the makefiles  
+make                     Builds the application  
 
 ### Running The Program
 There is a python program in NN/BrainServer.py which is the NN Microservice.  
