@@ -17,6 +17,13 @@ openvswitch
 CMake .                  Generates the makefiles  
 make                     Builds the application  
 
+### Coverity Build
+Coverity doesn't seem to work well with capnproto, so we strip out
+the capnproto code before submitting a coverity build.
+
+cmake . -DTYPE=COV  
+~/cov-analysis-linux64-8.7.0/bin/cov-build --dir cov-int make
+
 ### Running The Program
 There is a python program in NN/BrainServer.py which is the NN Microservice.  
 Start the NN with python NN/BrainServer.py /location/for/data/

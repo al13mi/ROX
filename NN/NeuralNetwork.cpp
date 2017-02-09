@@ -7,6 +7,7 @@ namespace Python {
 
     void TensorFlowRNN::worker()
     {
+#ifndef BUILD_TYPE
         capnp::EzRpcClient client("127.0.0.1:3333");
         Brain::Client brain(client.getMain<Brain>());
             
@@ -42,6 +43,7 @@ namespace Python {
             }
 
         }
+#endif
     }
 
     TensorFlowRNN::TensorFlowRNN()
@@ -53,6 +55,7 @@ namespace Python {
 
     uint32_t TensorFlowRNN::learn(const OpenFlow::FlowStats &stats)
     {
+#ifndef BUILD_TYPE
         std::lock_guard<std::mutex> guard(nnLock);
         std::unique_ptr <OpenFlow::FlowStats> statsCopy
                 = std::unique_ptr<OpenFlow::FlowStats>(new OpenFlow::FlowStats());
@@ -65,11 +68,13 @@ namespace Python {
         statsCopy->index = stats.index;
 
         statsList.push_front(std::move(statsCopy));
+#endif
         return 0;
     }
 
     uint32_t TensorFlowRNN::predict(const OpenFlow::FlowStats &stats)
     {
+#ifndef BUILD_TYPE
         std::lock_guard <std::mutex> guard(nnLock);
         capnp::EzRpcClient client("127.0.0.1:3333");
         Brain::Client brain(client.getMain<Brain>());
@@ -92,6 +97,9 @@ namespace Python {
             auto response = readPromise.wait(waitScope);
             return response.getValue();
         }
+#else
+    return 0;
+#endif
         
     }
 }

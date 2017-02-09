@@ -6,13 +6,16 @@
 #include <thread>
 #include <list>
 
+#ifndef BUILD_TYPE
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include "brain.capnp.h"
-#include <iostream>
 #include <capnp/ez-rpc.h>
 
 using ::Brain;
+#endif
+
+#include <iostream>
 
 namespace OpenFlow
 {
