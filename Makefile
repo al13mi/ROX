@@ -20,8 +20,8 @@ OBJS += NN/brain.capnp.o
 
 
 MAIN=controller
-CFLAGS=-pthread -I. -g -msse4.2 -std=gnu++11 -Wall -Werror -pedantic -fsanitize=address
-LDFLAGS= -g -levent -std=gnu++11 -lcapnp -lcapnp-rpc -lkj -lkj-async -pedantic -fsanitize=address
+CFLAGS=-pthread -I. -g -msse4.2 -std=gnu++11 -Wall -Werror -pedantic -fsanitize=address -fsanitize=leak -fsanitize=undefined
+LDFLAGS= -g -levent -std=gnu++11 -lcapnp -lcapnp-rpc -lkj -lkj-async -pedantic -fsanitize=address -fsanitize=leak -fsanitize=undefined
 CXX=g++
 #CXX=clang++-3.8
 
