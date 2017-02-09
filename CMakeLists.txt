@@ -11,7 +11,7 @@ set (CMAKE_CXX_FLAGS "-pthread -I. -g -msse4.2 -std=gnu++11 -Wall -Werror -pedan
 set (CMAKE_EXE_LINKER_FLAGS "-g -levent -std=gnu++11 -lcapnp -lcapnp-rpc -lkj -lkj-async -pedantic -fsanitize=address -fsanitize=leak -fsanitize=undefined")
 ELSE()
 message("Normal build.")
-set (CMAKE_CXX_FLAGS "-pthread -I. -g -msse4.2 -std=gnu++11 -Wall -Werror -pedantic -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+set (CMAKE_CXX_FLAGS "-pthread -I. -g -msse4.2 -std=gnu++11 -Wall -Wextra -pedantic -fsanitize=address -fsanitize=leak -fsanitize=undefined")
 set (CMAKE_EXE_LINKER_FLAGS "-g -levent -std=gnu++11 -lcapnp -lcapnp-rpc -lkj -lkj-async -pedantic -fsanitize=address -fsanitize=leak -fsanitize=undefined")
 ENDIF()
 
