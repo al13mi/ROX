@@ -11,7 +11,8 @@ capnproto
 CMake  
 g++  
 Python2.7  
-openvswitch  
+openvswitch
+Keras (implies the installation of either Tensorflow or Theano)
 
 ### Build Command
 CMake .                  Generates the makefiles  
