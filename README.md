@@ -14,7 +14,7 @@ Python2.7
 openvswitch
 Keras (implies the installation of either Tensorflow or Theano)
 
-Make sure you install the -dev versiosn of the packages (the ones with the headers
+Make sure you install the -dev version of the packages as well (the ones with the headers
 as we need these to compile).  For capnp, you will also need to install pycapnp
 from pip (pip install pycapnp)
 
